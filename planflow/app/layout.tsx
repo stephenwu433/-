@@ -1,11 +1,6 @@
-import {
-  ClerkProvider,
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -33,21 +28,26 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
           <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
-            <div className="text-lg font-semibold tracking-tight text-zinc-900">
+            <Link
+              href="/"
+              className="text-lg font-semibold tracking-tight text-zinc-900"
+            >
               PlanFlow
-            </div>
+            </Link>
             <div className="flex items-center gap-3">
               <Show when="signed-out">
-                <SignInButton mode="modal">
-                  <button className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100">
-                    登录
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-800">
-                    注册
-                  </button>
-                </SignUpButton>
+                <Link
+                  href="/sign-in"
+                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                >
+                  登录
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-800"
+                >
+                  注册
+                </Link>
               </Show>
               <Show when="signed-in">
                 <UserButton />

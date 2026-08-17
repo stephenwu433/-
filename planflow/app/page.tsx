@@ -1,4 +1,5 @@
 import { Show } from "@clerk/nextjs";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -16,9 +17,20 @@ export default function Home() {
         </p>
 
         <Show when="signed-out">
-          <p className="mt-8 text-sm text-zinc-500">
-            请点击右上角「注册」创建第一个测试账号。
-          </p>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Link
+              href="/sign-up"
+              className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              注册账号
+            </Link>
+            <Link
+              href="/sign-in"
+              className="rounded-md border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            >
+              已有账号登录
+            </Link>
+          </div>
         </Show>
 
         <Show when="signed-in">
