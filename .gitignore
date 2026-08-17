@@ -1,6 +1,10 @@
 # 忽略含密钥的本地部署文件
 deploy/.env
 deploy/docker-compose.yml
+deploy/fastgpt/docker-compose.yml
+deploy/fastgpt/config.json
+deploy/fastgpt/CREDENTIALS.local.txt
 deploy/**/secrets*
 **/*.pem
 **/*credential*
+**/*.local.txt
