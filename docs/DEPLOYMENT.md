@@ -26,9 +26,9 @@
 
 | 项目 | 建议 |
 |------|------|
-| 操作系统 | Linux（推荐）/ macOS / Windows WSL |
-| Docker | 已安装 Docker Engine |
-| Docker Compose | **≥ 2.17** |
+| 操作系统 | Linux（推荐）/ macOS / Windows（Docker Desktop + PowerShell，或 WSL） |
+| Docker | 已安装 Docker Engine / Docker Desktop |
+| Docker Compose | **≥ 2.17**（`docker compose version`） |
 | 资源（PoC） | 建议 ≥ 4 核 CPU、8GB 内存、50GB 磁盘 |
 | 资源（生产） | 建议 ≥ 8 核、16GB 内存，按并发与知识库规模扩容 |
 | 网络 | 可拉取模型 API（OpenAI / 国产大模型等）；国内可用阿里云镜像源 |
@@ -67,6 +67,73 @@ docker compose up -d
 - 密码：脚本终端输出的 `DEFAULT_ROOT_PSW`（亦写在 compose 环境变量中）
 
 > **重要**：`FE_DOMAIN` 必须填写用户真实访问的完整地址（含协议与端口），不要填容器内部地址。生产环境建议使用 HTTPS 域名。
+
+---
+
+## 3.1 Windows PowerShell 部署（推荐本机 Windows 用户）
+
+前提：已安装并启动 [Docker Desktop](https://www.docker.com/products/docker-desktop/)，PowerShell 中执行 `docker version` 正常。
+
+### A. 一键生成配置（非交互）
+
+在 PowerShell 中执行：
+
+```powershell
+# 工作目录（可改成你的路径）
+New-Item -ItemType Directory -Force -Path "$HOME\dongpeng-fastgpt" | Out-Null
+Set-Location "$HOME\dongpeng-fastgpt"
+
+# 下载官方安装脚本
+Invoke-WebRequest -Uri "https://doc.fastgpt.cn/deploy/install.sh" -OutFile "install.sh"
+
+# 本机访问地址（按需改成局域网 IP 或域名）
+$env:FASTGPT_NON_INTERACTIVE = "true"
+$env:FASTGPT_DEPLOY_BASE_URL = "https://doc.fastgpt.cn"
+$env:FASTGPT_DEPLOY_VERSION = "v4.15"
+$env:FASTGPT_REGION = "cn"
+$env:FASTGPT_VECTOR = "pg"
+$env:FASTGPT_AUTO_GENERATE_CREDENTIALS = "true"
+$env:FASTGPT_FE_DOMAIN = "http://127.0.0.1:3000"
+$env:FASTGPT_SANDBOX_PROXY_URL = "ws://127.0.0.1:3006"
+$env:FASTGPT_S3_ENDPOINT = "http://127.0.0.1:9000"
+$env:FASTGPT_MCP_ENDPOINT = "http://127.0.0.1:3003"
+
+# 用 Git Bash / WSL 跑 bash 脚本（Docker Desktop 通常自带 Git Bash；或改用 wsl）
+bash ./install.sh
+```
+
+若本机没有 `bash`，可改用 WSL：
+
+```powershell
+wsl -e bash -lc "cd /mnt/c/Users/$env:USERNAME/dongpeng-fastgpt && FASTGPT_NON_INTERACTIVE=true FASTGPT_DEPLOY_BASE_URL=https://doc.fastgpt.cn FASTGPT_DEPLOY_VERSION=v4.15 FASTGPT_REGION=cn FASTGPT_VECTOR=pg FASTGPT_AUTO_GENERATE_CREDENTIALS=true FASTGPT_FE_DOMAIN=http://127.0.0.1:3000 FASTGPT_SANDBOX_PROXY_URL=ws://127.0.0.1:3006 FASTGPT_S3_ENDPOINT=http://127.0.0.1:9000 FASTGPT_MCP_ENDPOINT=http://127.0.0.1:3003 bash install.sh"
+```
+
+脚本结束时会打印 **root 密码**，请立刻记下来。
+
+### B. 拉取镜像并启动（下一步只做这个）
+
+```powershell
+Set-Location "$HOME\dongpeng-fastgpt"
+docker compose --profile prepull pull
+docker compose up -d
+docker compose ps
+```
+
+### C. 访问与常用命令
+
+```powershell
+# 浏览器打开
+Start-Process "http://127.0.0.1:3000"
+
+# 看日志
+docker compose logs -f fastgpt-app
+
+# 停止
+docker compose down
+```
+
+- 用户名：`root`  
+- 密码：安装脚本终端输出的密码（也在 `docker-compose.yml` 的 `DEFAULT_ROOT_PSW` / `x-default-root-psw`）
 
 ---
 

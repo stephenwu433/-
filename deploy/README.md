@@ -14,14 +14,30 @@
 
 ## 下一步（唯一动作）
 
+### PowerShell（Windows + Docker Desktop）
+
+先确保目录里已有 `docker-compose.yml`（由 `install.sh` 生成），然后：
+
+```powershell
+Set-Location "$HOME\dongpeng-fastgpt"   # 改成你的实际目录
+docker compose --profile prepull pull
+docker compose up -d
+docker compose ps
+Start-Process "http://127.0.0.1:3000"
+```
+
+或直接运行：[`powershell-next-step.ps1`](./powershell-next-step.ps1)
+
+### Bash（Linux / WSL / macOS）
+
 ```bash
-cd deploy/fastgpt
+cd deploy/fastgpt   # 或你的部署目录
 sudo docker compose --profile prepull pull
 sudo docker compose up -d
 ```
 
 启动后访问：`http://127.0.0.1:3000`  
-账号：`root`（密码见本机 `fastgpt/CREDENTIALS.local.txt`，勿入库）
+账号：`root`（密码见安装脚本输出 / `docker-compose.yml` 中的 `x-default-root-psw`）
 
 ## 本仓库提供的模板
 
