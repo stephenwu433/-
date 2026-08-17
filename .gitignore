@@ -1,0 +1,6 @@
+# 忽略含密钥的本地部署文件
+deploy/.env
+deploy/docker-compose.yml
+deploy/**/secrets*
+**/*.pem
+**/*credential*
