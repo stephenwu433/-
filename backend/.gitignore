@@ -4,6 +4,7 @@ __pycache__/
 venv/
 .env
 .env.local
+.neon-bootstrap.json
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
