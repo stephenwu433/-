@@ -18,12 +18,16 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 
 
 def slugify(name: str) -> str:
-    """Turn a team name into a URL-safe slug (ASCII-ish)."""
+    """Turn a team name into a URL-safe slug (ASCII-ish).
+
+    Non-ASCII names (e.g. Chinese) become a short random slug so they
+    stay unique and readable in URLs.
+    """
     normalized = unicodedata.normalize("NFKD", name)
     ascii_only = normalized.encode("ascii", "ignore").decode("ascii")
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_only).strip("-").lower()
     if not slug:
-        slug = "team"
+        return f"team-{secrets.token_hex(3)}"
     return slug[:48]
 
 
@@ -37,7 +41,6 @@ def unique_slug(db: Session, name: str) -> str:
             return candidate
         candidate = f"{base}-{secrets.token_hex(2)}"
     return f"{base}-{secrets.token_hex(4)}"
-
 
 @router.post("", response_model=TeamResponse, status_code=status.HTTP_201_CREATED)
 def create_team(
