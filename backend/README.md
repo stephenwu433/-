@@ -125,6 +125,15 @@ Clerk 登录 → JWT.sub = user_xxx
                 projects
 ```
 
+## CORS（前端浏览器访问）
+
+默认允许 `http://localhost:3000` 与 `http://127.0.0.1:3000`。
+若前端域名不同，在 `.env` 设置：
+
+```bash
+PLANFLOW_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
 ## 下一步
 
 - 前端「团队详情 / 项目列表」页：选中团队后调 `/teams/{id}/projects`

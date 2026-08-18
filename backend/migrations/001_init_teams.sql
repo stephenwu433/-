@@ -3,7 +3,7 @@
 -- 1) users          = 我们自己库里的用户镜像（主键用 UUID，另存 Clerk 的 user_xxx）
 -- 2) teams          = 团队
 -- 3) team_members   = 谁属于哪个团队、角色是什么
--- 4) projects       = 项目（先建表，下一步再做接口）
+-- 4) projects       = 项目（本迁移建表；接口见 /teams/{id}/projects）
 --
 -- 用 scripts/migrate.py 执行本文件。
 
