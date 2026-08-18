@@ -15,5 +15,7 @@ npm run dev
 ## 下一步（团队版）
 
 1. 你在页面上注册第一个测试账号  
-2. 之后接 FastAPI + PostgreSQL，用 Clerk JWT 校验身份  
-3. 需要接到你自己的 Clerk 应用时，在本机运行 `clerk auth login` 认领，或替换 `.env.local` 里的密钥  
+2. 后端已支持 Clerk JWT + 创建/查看团队（见 `../backend/README.md`）  
+3. 接下来：登录后把 Clerk session token 传给 `POST/GET /teams`  
+4. 需要接到你自己的 Clerk 应用时，在本机运行 `clerk auth login` 认领，或替换 `.env.local` 里的密钥  
+
