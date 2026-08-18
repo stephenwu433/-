@@ -12,10 +12,18 @@ npm run dev
 
 打开 http://localhost:3000 ，右上角可「注册 / 登录」。
 
+## 接后端地址（已完成这一步）
+
+在 `.env.local` 里可加（不写也有默认值）：
+
+```bash
+NEXT_PUBLIC_PLANFLOW_API_URL=http://127.0.0.1:8000
+```
+
+代码里用 `lib/api.ts` 的 `getApiBaseUrl()` 读取。后端已开 CORS，浏览器才能从 `:3000` 访问 `:8000`。
+
 ## 下一步（团队版）
 
-1. 你在页面上注册第一个测试账号  
-2. 后端已支持 Clerk JWT + 创建/查看团队（见 `../backend/README.md`）  
-3. 接下来：登录后把 Clerk session token 传给 `POST/GET /teams`  
-4. 需要接到你自己的 Clerk 应用时，在本机运行 `clerk auth login` 认领，或替换 `.env.local` 里的密钥  
+1. 登录后做「我的团队」页：用 Clerk `getToken()` 调 `POST/GET /teams`  
+2. 需要接到你自己的 Clerk 应用时，替换 `.env.local` 里的密钥  
 
