@@ -1,13 +1,19 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from app.auth import auth_status, get_current_user
 from app.db import get_database_url, ping_database, run_smoke_test
+from app.models import User
+from app.routers import teams
+from app.schemas import MeResponse
 
 app = FastAPI(
     title="PlanFlow API",
-    description="团队版 PlanFlow 后端（起步骨架 + Neon PostgreSQL）",
-    version="0.1.0",
+    description="团队版 PlanFlow 后端（Neon + Clerk JWT + Teams MVP）",
+    version="0.2.0",
 )
+
+app.include_router(teams.router)
 
 
 class SmokeTestRequest(BaseModel):
@@ -21,6 +27,7 @@ def health():
         "status": "ok",
         "service": "planflow-api",
         "database_configured": get_database_url() is not None,
+        "auth": auth_status(),
     }
 
 
@@ -51,3 +58,14 @@ def db_smoke_test(body: SmokeTestRequest | None = None):
         return run_smoke_test(message=message)
     except Exception as exc:  # noqa: BLE001 - surface connection errors to caller
         raise HTTPException(status_code=503, detail=f"smoke test failed: {exc}") from exc
+
+
+@app.get("/me", response_model=MeResponse)
+def me(current_user: User = Depends(get_current_user)) -> MeResponse:
+    """返回当前登录用户在我们库里的镜像记录（需要 Bearer JWT）。"""
+    return MeResponse(
+        id=current_user.id,
+        clerk_user_id=current_user.clerk_user_id,
+        email=current_user.email,
+        display_name=current_user.display_name,
+    )
