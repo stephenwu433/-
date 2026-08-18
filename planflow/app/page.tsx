@@ -34,10 +34,17 @@ export default function Home() {
         </Show>
 
         <Show when="signed-in">
-          <p className="mt-8 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            登录成功。后端已就绪；下一步会做「我的团队」页面（用你的登录
-            token 调用 API）。
-          </p>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              登录成功。可以去创建或查看你的团队了。
+            </p>
+            <Link
+              href="/teams"
+              className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+            >
+              打开我的团队
+            </Link>
+          </div>
         </Show>
       </div>
     </main>
