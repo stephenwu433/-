@@ -6,7 +6,8 @@
 2. `GET /db/ping` — 能否连上 Neon
 3. `POST /db/smoke-test` — 旧的读写冒烟
 4. `GET /me` — 当前登录用户（需要 Bearer JWT）
-5. `POST /teams` / `GET /teams` — 创建 / 查看**自己的**团队（需要 Bearer JWT）
+5. `POST /teams` / `GET /teams` — 创建 / 查看**自己的**团队
+6. `POST /teams/{team_id}/projects` / `GET /teams/{team_id}/projects` — 在自己所属团队里创建 / 查看项目
 
 数据库表（`migrations/001_init_teams.sql`）：`users`、`teams`、`team_members`、`projects`。
 
@@ -88,17 +89,26 @@ export PLANFLOW_DEV_JWT_SECRET=dev-only-change-me
 TOKEN=$(.venv/bin/python scripts/mint_dev_token.py)
 
 curl -s http://127.0.0.1:8000/me -H "Authorization: Bearer $TOKEN"
-curl -s -X POST http://127.0.0.1:8000/teams \
+TEAM=$(curl -s -X POST http://127.0.0.1:8000/teams \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"我的第一个团队"}'
-curl -s http://127.0.0.1:8000/teams -H "Authorization: Bearer $TOKEN"
+  -d '{"name":"我的第一个团队"}')
+echo "$TEAM"
+TEAM_ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$TEAM")
+
+curl -s -X POST "http://127.0.0.1:8000/teams/$TEAM_ID/projects" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"第一个项目","description":"hello"}'
+curl -s "http://127.0.0.1:8000/teams/$TEAM_ID/projects" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 或一键：
 
 ```bash
 .venv/bin/python scripts/verify_teams.py
+.venv/bin/python scripts/verify_projects.py
 ```
 
 浏览器文档：http://localhost:8000/docs
@@ -112,19 +122,10 @@ Clerk 登录 → JWT.sub = user_xxx
          ↓
  team_members ←→ teams
                     ↓
-                projects（表已建，接口下一步）
-```
-
-## CORS（前端浏览器访问）
-
-默认允许 `http://localhost:3000` 与 `http://127.0.0.1:3000`。
-若前端域名不同，在 `.env` 设置：
-
-```bash
-PLANFLOW_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+                projects
 ```
 
 ## 下一步
 
-- 前端「我的团队」页：登录后把 Clerk token 传给 `/teams`
-- 再做项目（projects）的创建/列表接口
+- 前端「团队详情 / 项目列表」页：选中团队后调 `/teams/{id}/projects`
+- 再做排期、成员邀请等
