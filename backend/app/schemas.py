@@ -29,3 +29,21 @@ class TeamResponse(BaseModel):
 
 class TeamListResponse(BaseModel):
     teams: list[TeamResponse]
+
+
+class ProjectCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+
+
+class ProjectResponse(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    name: str
+    description: str | None = None
+    status: str
+    created_at: datetime
+
+
+class ProjectListResponse(BaseModel):
+    projects: list[ProjectResponse]
