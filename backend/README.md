@@ -115,7 +115,16 @@ Clerk 登录 → JWT.sub = user_xxx
                 projects（表已建，接口下一步）
 ```
 
+## CORS（前端浏览器访问）
+
+默认允许 `http://localhost:3000` 与 `http://127.0.0.1:3000`。
+若前端域名不同，在 `.env` 设置：
+
+```bash
+PLANFLOW_CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+```
+
 ## 下一步
 
-- 前端登录后把 Clerk token 传给 `/teams`
+- 前端「我的团队」页：登录后把 Clerk token 传给 `/teams`
 - 再做项目（projects）的创建/列表接口

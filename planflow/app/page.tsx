@@ -35,7 +35,8 @@ export default function Home() {
 
         <Show when="signed-in">
           <p className="mt-8 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            登录成功。下一步我们将搭建 FastAPI 后端，并把你的用户身份传给接口。
+            登录成功。后端已就绪；下一步会做「我的团队」页面（用你的登录
+            token 调用 API）。
           </p>
         </Show>
       </div>
