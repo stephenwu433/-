@@ -35,6 +35,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               PlanFlow
             </Link>
             <div className="flex items-center gap-3">
+              <Show when="signed-in">
+                <Link
+                  href="/teams"
+                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                >
+                  我的团队
+                </Link>
+                <UserButton />
+              </Show>
               <Show when="signed-out">
                 <Link
                   href="/sign-in"
@@ -48,9 +57,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 >
                   注册
                 </Link>
-              </Show>
-              <Show when="signed-in">
-                <UserButton />
               </Show>
             </div>
           </header>
