@@ -1,6 +1,6 @@
 # PlanFlow（前端）
 
-Next.js + Clerk 登录 +「我的团队」页（调用 FastAPI）。
+Next.js + Clerk 登录 + 团队 / 项目页（调用 FastAPI）。
 
 ## 本地启动
 
@@ -26,15 +26,15 @@ npm install
 npm run dev
 ```
 
-打开 http://localhost:3000 → 注册/登录 →「我的团队」。
+打开 http://localhost:3000 → 注册/登录 →「我的团队」→「查看项目」。
 
-## 这一页在干什么（小白版）
+## 页面怎么串起来（小白版）
 
-1. 你登录后，Clerk 给你一枚 JWT  
-2. 页面用 `getToken()` 拿到它  
-3. 请求后端时带上：`Authorization: Bearer <token>`  
-4. 后端校验通过后，才能 `创建团队` / `查看我的团队`
+1. `/teams`：创建 / 查看你的团队  
+2. 点某个团队的「查看项目」→ `/teams/{teamId}`  
+3. 在该页创建 / 查看这个团队下的项目  
+4. 每次请求都带 `Authorization: Bearer <Clerk token>`
 
 ## 下一步
 
-项目（projects）的创建/列表页面与接口。
+排期、成员邀请，或把项目状态改成可编辑。

@@ -163,6 +163,12 @@ function TeamsPanel() {
                     {team.slug} · {team.role}
                   </p>
                 </div>
+                <Link
+                  href={`/teams/${team.id}`}
+                  className="shrink-0 rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+                >
+                  查看项目
+                </Link>
               </li>
             ))}
           </ul>
