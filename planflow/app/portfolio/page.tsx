@@ -241,6 +241,12 @@ function ProjectCard({ project }: { project: PortfolioProject }) {
           周期排期
         </Link>
         <Link
+          href={`/teams/${project.team_id}/projects/${project.id}/daily`}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50"
+        >
+          每日任务
+        </Link>
+        <Link
           href={`/teams/${project.team_id}`}
           className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50"
         >

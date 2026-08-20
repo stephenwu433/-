@@ -162,6 +162,13 @@ export default function ProjectCycleSchedulePage() {
           ← 返回项目设置
         </Link>
         {" · "}
+        <Link
+          href={`/teams/${teamId}/projects/${projectId}/daily`}
+          className="underline hover:text-zinc-800"
+        >
+          每日任务
+        </Link>
+        {" · "}
         <Link href="/portfolio" className="underline hover:text-zinc-800">
           项目总览
         </Link>

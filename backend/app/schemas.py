@@ -200,6 +200,44 @@ class TaskListResponse(BaseModel):
     tasks: list[TaskResponse]
 
 
+class TimeEntryUpsertRequest(BaseModel):
+    hours: float = Field(ge=0, le=24)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class TimeEntryResponse(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    project_id: uuid.UUID
+    task_id: uuid.UUID
+    user_id: uuid.UUID
+    work_date: date
+    hours: float
+    note: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DailyTaskCard(BaseModel):
+    task: TaskResponse
+    assignee_display_name: str | None = None
+    my_hours: float = 0.0
+    my_note: str | None = None
+    my_entry_id: uuid.UUID | None = None
+    total_hours: float = 0.0
+
+
+class DailyTasksResponse(BaseModel):
+    view_date: date
+    project_id: uuid.UUID
+    team_id: uuid.UUID
+    project_name: str
+    task_count: int
+    total_logged_hours: float
+    my_logged_hours: float
+    tasks: list[DailyTaskCard]
+
+
 PHASE_WORK_ITEM_STATUSES = ("todo", "doing", "done")
 
 DEFAULT_PHASE_NAMES = (
