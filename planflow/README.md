@@ -17,10 +17,11 @@ npm run dev
 ## 功能（小白地图）
 
 1. `/teams` 我的团队  
-2. `/teams/{id}` 项目、成员、生成邀请链接、设置排期日期  
-3. `/teams/{id}/calendar` 排期日历  
-4. `/invites/{token}` 接受邀请加入团队  
+2. `/teams/{id}` 项目、成员、邀请、项目排期  
+3. `/teams/{id}/projects/{projectId}` 具体任务  
+4. `/teams/{id}/calendar` 排期日历  
+5. `/invites/{token}` 接受邀请  
 
 ## 下一步
 
-接入飞书机器人（项目创建/状态变更通知）。
+按你新上传的产品说明继续补能力；或接入飞书机器人。
