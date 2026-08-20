@@ -8,9 +8,17 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createProject,
   listTeamProjects,
+  updateProjectStatus,
   type Project,
+  type ProjectStatus,
 } from "@/lib/projects-api";
 import { listMyTeams, type Team } from "@/lib/teams-api";
+
+const STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: "进行中",
+  paused: "已暂停",
+  done: "已完成",
+};
 
 /**
  * 团队详情：在某个团队里创建 / 查看项目。
@@ -64,6 +72,7 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -133,6 +142,26 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
     }
   }
 
+  async function onStatusChange(projectId: string, status: ProjectStatus) {
+    setUpdatingId(projectId);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError("拿不到登录 token。请重新登录后再试。");
+        return;
+      }
+      const updated = await updateProjectStatus(token, teamId, projectId, status);
+      setProjects((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   return (
     <div className="mt-8 space-y-8">
       {team ? (
@@ -197,12 +226,38 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         ) : (
           <ul className="mt-3 divide-y divide-zinc-200 border-t border-b border-zinc-200">
             {projects.map((project) => (
-              <li key={project.id} className="py-3">
-                <p className="text-sm font-medium text-zinc-900">{project.name}</p>
-                <p className="text-xs text-zinc-500">
-                  {project.status}
-                  {project.description ? ` · ${project.description}` : ""}
-                </p>
+              <li
+                key={project.id}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-zinc-900">{project.name}</p>
+                  <p className="text-xs text-zinc-500">
+                    {project.description ? project.description : "暂无简介"}
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-zinc-700">
+                  <span className="sr-only">项目状态</span>
+                  <select
+                    value={
+                      project.status === "paused" || project.status === "done"
+                        ? project.status
+                        : "active"
+                    }
+                    disabled={updatingId === project.id || !team}
+                    onChange={(e) =>
+                      onStatusChange(
+                        project.id,
+                        e.target.value as ProjectStatus,
+                      )
+                    }
+                    className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-zinc-500 disabled:opacity-50"
+                  >
+                    <option value="active">{STATUS_LABELS.active}</option>
+                    <option value="paused">{STATUS_LABELS.paused}</option>
+                    <option value="done">{STATUS_LABELS.done}</option>
+                  </select>
+                </label>
               </li>
             ))}
           </ul>
