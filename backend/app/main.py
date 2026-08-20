@@ -6,13 +6,13 @@ from app.auth import auth_status, get_current_user
 from app.cors import cors_allow_origins
 from app.db import get_database_url, ping_database, run_smoke_test
 from app.models import User
-from app.routers import members, projects, tasks, teams
+from app.routers import cycle_schedule, members, projects, tasks, teams
 from app.schemas import MeResponse
 
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
-    version="0.6.0",
+    version="0.7.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
@@ -31,6 +31,7 @@ app.include_router(projects.portfolio_router)
 app.include_router(members.members_router)
 app.include_router(members.invites_router)
 app.include_router(tasks.router)
+app.include_router(cycle_schedule.router)
 
 
 class SmokeTestRequest(BaseModel):

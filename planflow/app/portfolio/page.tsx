@@ -235,6 +235,12 @@ function ProjectCard({ project }: { project: PortfolioProject }) {
           打开任务 / 设置
         </Link>
         <Link
+          href={`/teams/${project.team_id}/projects/${project.id}/schedule`}
+          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50"
+        >
+          周期排期
+        </Link>
+        <Link
           href={`/teams/${project.team_id}`}
           className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50"
         >
