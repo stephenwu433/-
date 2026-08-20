@@ -111,3 +111,40 @@ class ProjectUpdateRequest(BaseModel):
 
 class ScheduleResponse(BaseModel):
     projects: list[ProjectResponse]
+
+
+TASK_STATUSES = ("todo", "doing", "done")
+
+
+class TaskCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    assignee_user_id: uuid.UUID | None = None
+    due_date: date | None = None
+
+
+class TaskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
+    status: str | None = Field(default=None, max_length=20)
+    assignee_user_id: uuid.UUID | None = None
+    clear_assignee: bool = False
+    due_date: date | None = None
+    clear_due_date: bool = False
+
+
+class TaskResponse(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    project_id: uuid.UUID
+    title: str
+    description: str | None = None
+    status: str
+    assignee_user_id: uuid.UUID | None = None
+    due_date: date | None = None
+    sort_order: int
+    created_at: datetime
+
+
+class TaskListResponse(BaseModel):
+    tasks: list[TaskResponse]

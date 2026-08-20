@@ -414,22 +414,30 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
                       {project.description ? project.description : "暂无简介"}
                     </p>
                   </div>
-                  <select
-                    value={
-                      project.status === "paused" || project.status === "done"
-                        ? project.status
-                        : "active"
-                    }
-                    disabled={updatingId === project.id || !team}
-                    onChange={(e) =>
-                      onStatusChange(project.id, e.target.value as ProjectStatus)
-                    }
-                    className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
-                  >
-                    <option value="active">{STATUS_LABELS.active}</option>
-                    <option value="paused">{STATUS_LABELS.paused}</option>
-                    <option value="done">{STATUS_LABELS.done}</option>
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/teams/${teamId}/projects/${project.id}`}
+                      className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+                    >
+                      任务
+                    </Link>
+                    <select
+                      value={
+                        project.status === "paused" || project.status === "done"
+                          ? project.status
+                          : "active"
+                      }
+                      disabled={updatingId === project.id || !team}
+                      onChange={(e) =>
+                        onStatusChange(project.id, e.target.value as ProjectStatus)
+                      }
+                      className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+                    >
+                      <option value="active">{STATUS_LABELS.active}</option>
+                      <option value="paused">{STATUS_LABELS.paused}</option>
+                      <option value="done">{STATUS_LABELS.done}</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
