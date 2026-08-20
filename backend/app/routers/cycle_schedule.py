@@ -369,6 +369,9 @@ def update_work_item(
             )
         item.status = status_value
 
+    project = _require_project(db, team_id=team_id, project_id=project_id)
+    project.plan_confirmed = False
+
     db.commit()
     db.refresh(item)
     return _work_item_to_response(item)
