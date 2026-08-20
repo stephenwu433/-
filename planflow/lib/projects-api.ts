@@ -9,12 +9,14 @@
 
 import { apiFetch } from "./api-client";
 
+export type ProjectStatus = "active" | "paused" | "done";
+
 export type Project = {
   id: string;
   team_id: string;
   name: string;
   description: string | null;
-  status: string;
+  status: ProjectStatus | string;
   created_at: string;
 };
 
@@ -41,5 +43,17 @@ export function createProject(
       name,
       description: description?.trim() ? description.trim() : null,
     }),
+  });
+}
+
+export function updateProjectStatus(
+  token: string,
+  teamId: string,
+  projectId: string,
+  status: ProjectStatus,
+): Promise<Project> {
+  return apiFetch<Project>(`/teams/${teamId}/projects/${projectId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
   });
 }

@@ -7,7 +7,8 @@
 3. `POST /db/smoke-test` — 旧的读写冒烟
 4. `GET /me` — 当前登录用户（需要 Bearer JWT）
 5. `POST /teams` / `GET /teams` — 创建 / 查看**自己的**团队
-6. `POST /teams/{team_id}/projects` / `GET /teams/{team_id}/projects` — 在自己所属团队里创建 / 查看项目
+6. `POST /teams/{team_id}/projects` / `GET /teams/{team_id}/projects` — 创建 / 查看项目
+7. `PATCH /teams/{team_id}/projects/{project_id}` — 改项目状态（`active` / `paused` / `done`）
 
 数据库表（`migrations/001_init_teams.sql`）：`users`、`teams`、`team_members`、`projects`。
 

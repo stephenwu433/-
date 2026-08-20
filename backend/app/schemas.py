@@ -47,3 +47,10 @@ class ProjectResponse(BaseModel):
 
 class ProjectListResponse(BaseModel):
     projects: list[ProjectResponse]
+
+
+PROJECT_STATUSES = ("active", "paused", "done")
+
+
+class ProjectStatusUpdateRequest(BaseModel):
+    status: str = Field(min_length=1, max_length=20)

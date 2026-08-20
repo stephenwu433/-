@@ -108,6 +108,52 @@ def main() -> int:
             return 1
         print("unauthenticated → 401 OK")
 
+        project_id = created.json()["id"]
+        patched = client.patch(
+            f"/teams/{team_id}/projects/{project_id}",
+            headers=owner_headers,
+            json={"status": "paused"},
+        )
+        patched.raise_for_status()
+        if patched.json()["status"] != "paused":
+            print("ERROR: status not updated to paused", file=sys.stderr)
+            return 1
+        print("status → paused OK")
+
+        patched_done = client.patch(
+            f"/teams/{team_id}/projects/{project_id}",
+            headers=owner_headers,
+            json={"status": "done"},
+        )
+        patched_done.raise_for_status()
+        if patched_done.json()["status"] != "done":
+            print("ERROR: status not updated to done", file=sys.stderr)
+            return 1
+        print("status → done OK")
+
+        bad = client.patch(
+            f"/teams/{team_id}/projects/{project_id}",
+            headers=owner_headers,
+            json={"status": "nope"},
+        )
+        if bad.status_code != 400:
+            print(f"ERROR: expected 400 for bad status, got {bad.status_code}", file=sys.stderr)
+            return 1
+        print("invalid status → 400 OK")
+
+        other_patch = client.patch(
+            f"/teams/{team_id}/projects/{project_id}",
+            headers=other_headers,
+            json={"status": "active"},
+        )
+        if other_patch.status_code != 404:
+            print(
+                f"ERROR: expected 404 for non-member patch, got {other_patch.status_code}",
+                file=sys.stderr,
+            )
+            return 1
+        print("non-member patch → 404 OK")
+
     print("verify_projects.py: ALL OK")
     return 0
 

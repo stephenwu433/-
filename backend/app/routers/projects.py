@@ -1,8 +1,9 @@
-"""Project create / list endpoints (MVP).
+"""Project create / list / status endpoints (MVP).
 
 Beginner map:
-  POST /teams/{team_id}/projects  → create a project inside a team you belong to
-  GET  /teams/{team_id}/projects  → list that team's projects
+  POST  /teams/{team_id}/projects              → create
+  GET   /teams/{team_id}/projects              → list
+  PATCH /teams/{team_id}/projects/{project_id} → update status
 """
 
 from __future__ import annotations
@@ -16,9 +17,45 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import Project, User
-from app.schemas import ProjectCreateRequest, ProjectListResponse, ProjectResponse
+from app.schemas import (
+    PROJECT_STATUSES,
+    ProjectCreateRequest,
+    ProjectListResponse,
+    ProjectResponse,
+    ProjectStatusUpdateRequest,
+)
 
 router = APIRouter(prefix="/teams/{team_id}/projects", tags=["projects"])
+
+
+def _to_response(project: Project) -> ProjectResponse:
+    return ProjectResponse(
+        id=project.id,
+        team_id=project.team_id,
+        name=project.name,
+        description=project.description,
+        status=project.status,
+        created_at=project.created_at,
+    )
+
+
+def _get_team_project(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> Project:
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.team_id == team_id)
+        .one_or_none()
+    )
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
+    return project
 
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -48,15 +85,7 @@ def create_project(
     db.add(project)
     db.commit()
     db.refresh(project)
-
-    return ProjectResponse(
-        id=project.id,
-        team_id=project.team_id,
-        name=project.name,
-        description=project.description,
-        status=project.status,
-        created_at=project.created_at,
-    )
+    return _to_response(project)
 
 
 @router.get("", response_model=ProjectListResponse)
@@ -73,15 +102,29 @@ def list_team_projects(
         .order_by(Project.created_at.desc())
         .all()
     )
-    projects = [
-        ProjectResponse(
-            id=row.id,
-            team_id=row.team_id,
-            name=row.name,
-            description=row.description,
-            status=row.status,
-            created_at=row.created_at,
+    return ProjectListResponse(projects=[_to_response(row) for row in rows])
+
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+def update_project_status(
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    body: ProjectStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProjectResponse:
+    """Change status: active | paused | done."""
+    require_team_membership(db, team_id=team_id, user=current_user)
+    project = _get_team_project(db, team_id=team_id, project_id=project_id)
+
+    new_status = body.status.strip().lower()
+    if new_status not in PROJECT_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Use one of: {', '.join(PROJECT_STATUSES)}",
         )
-        for row in rows
-    ]
-    return ProjectListResponse(projects=projects)
+
+    project.status = new_status
+    db.commit()
+    db.refresh(project)
+    return _to_response(project)

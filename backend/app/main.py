@@ -12,7 +12,7 @@ from app.schemas import MeResponse
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Neon + Clerk JWT + Teams/Projects MVP）",
-    version="0.3.0",
+    version="0.3.1",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
