@@ -198,3 +198,80 @@ class TaskResponse(BaseModel):
 
 class TaskListResponse(BaseModel):
     tasks: list[TaskResponse]
+
+
+PHASE_WORK_ITEM_STATUSES = ("todo", "doing", "done")
+
+DEFAULT_PHASE_NAMES = (
+    "项目启动与目标确认",
+    "方案与示范高保真",
+    "核心技术与后端",
+    "优化全过程体验",
+    "驻场上线与维护",
+)
+
+
+class PhaseWorkItemResponse(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    project_id: uuid.UUID
+    phase_id: uuid.UUID
+    title: str
+    assignee_user_id: uuid.UUID | None = None
+    planned_start: date | None = None
+    planned_end: date | None = None
+    estimated_hours: float = 0.0
+    status: str
+    sort_order: int
+    created_at: datetime
+
+
+class PhaseWorkItemUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    assignee_user_id: uuid.UUID | None = None
+    clear_assignee: bool = False
+    planned_start: date | None = None
+    planned_end: date | None = None
+    clear_dates: bool = False
+    estimated_hours: float | None = Field(default=None, ge=0, le=1000)
+    status: str | None = Field(default=None, max_length=20)
+
+
+class ProjectPhaseResponse(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    project_id: uuid.UUID
+    name: str
+    sort_order: int
+    planned_start: date | None = None
+    planned_end: date | None = None
+    work_items: list[PhaseWorkItemResponse] = Field(default_factory=list)
+    created_at: datetime
+
+
+class ProjectPhaseUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    planned_start: date | None = None
+    planned_end: date | None = None
+    clear_dates: bool = False
+
+
+class ProjectCycleScheduleResponse(BaseModel):
+    project_id: uuid.UUID
+    team_id: uuid.UUID
+    project_name: str
+    planned_start: date | None = None
+    planned_end: date | None = None
+    member_daily_hours: float = 6.0
+    owner_user_id: uuid.UUID | None = None
+    plan_confirmed: bool = False
+    total_estimated_hours: float = 0.0
+    phase_count: int = 0
+    work_item_count: int = 0
+    phases: list[ProjectPhaseResponse] = Field(default_factory=list)
+
+
+class GenerateCycleScheduleRequest(BaseModel):
+    replace_existing: bool = True
+    phase_count: int = Field(default=5, ge=2, le=8)
+

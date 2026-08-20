@@ -225,6 +225,13 @@ export default function ProjectTasksPage() {
           ← 返回团队项目
         </Link>
         {" · "}
+        <Link
+          href={`/teams/${teamId}/projects/${projectId}/schedule`}
+          className="underline hover:text-zinc-800"
+        >
+          全局周期排期
+        </Link>
+        {" · "}
         <Link href="/portfolio" className="underline hover:text-zinc-800">
           项目总览
         </Link>
@@ -365,6 +372,12 @@ export default function ProjectTasksPage() {
                 >
                   {settingsSaving ? "保存中…" : "保存设置"}
                 </button>
+                <Link
+                  href={`/teams/${teamId}/projects/${projectId}/schedule`}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50"
+                >
+                  全周期排期 →
+                </Link>
               </div>
             </form>
           ) : null}
