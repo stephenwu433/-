@@ -15,7 +15,12 @@ export default function TeamsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+      <p className="text-sm text-zinc-500">
+        <Link href="/portfolio" className="underline hover:text-zinc-800">
+          ← 项目总览
+        </Link>
+      </p>
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
         我的团队
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">

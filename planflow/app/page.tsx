@@ -36,14 +36,22 @@ export default function Home() {
         <Show when="signed-in">
           <div className="mt-8 flex flex-col items-center gap-3">
             <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              登录成功。可以去创建或查看你的团队了。
+              登录成功。可以从项目总览开始，或先管理团队。
             </p>
-            <Link
-              href="/teams"
-              className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
-            >
-              打开我的团队
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/portfolio"
+                className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+              >
+                打开项目总览
+              </Link>
+              <Link
+                href="/teams"
+                className="rounded-md border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                我的团队
+              </Link>
+            </div>
           </div>
         </Show>
       </div>
