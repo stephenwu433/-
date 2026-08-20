@@ -6,8 +6,16 @@ import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import {
+  createInvite,
+  listInvites,
+  listMembers,
+  type Invite,
+  type TeamMember,
+} from "@/lib/members-api";
+import {
   createProject,
   listTeamProjects,
+  updateProjectSchedule,
   updateProjectStatus,
   type Project,
   type ProjectStatus,
@@ -20,10 +28,6 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
   done: "已完成",
 };
 
-/**
- * 团队详情：在某个团队里创建 / 查看项目。
- * 路由：/teams/[teamId]
- */
 export default function TeamProjectsPage() {
   const { isLoaded, isSignedIn } = useAuth();
   const params = useParams<{ teamId: string }>();
@@ -36,14 +40,24 @@ export default function TeamProjectsPage() {
           ← 返回我的团队
         </Link>
       </p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-        团队项目
-      </h1>
-      <p className="mt-2 text-sm leading-6 text-zinc-600">
-        调用后端{" "}
-        <code className="text-zinc-800">/teams/&#123;id&#125;/projects</code>
-        ：只有该团队的成员才能创建和查看项目。
-      </p>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            团队项目
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            管理项目、成员邀请，以及排期日期。
+          </p>
+        </div>
+        {teamId ? (
+          <Link
+            href={`/teams/${teamId}/calendar`}
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+          >
+            打开排期日历
+          </Link>
+        ) : null}
+      </div>
 
       {!isLoaded ? (
         <p className="mt-8 text-sm text-zinc-500">正在确认登录状态…</p>
@@ -68,12 +82,21 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
   const { getToken, isLoaded } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [plannedStart, setPlannedStart] = useState("");
+  const [plannedEnd, setPlannedEnd] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [latestInvitePath, setLatestInvitePath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const canManageInvites = team?.role === "owner" || team?.role === "admin";
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -90,12 +113,29 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
     setTeam(matched);
     if (!matched) {
       setProjects([]);
+      setMembers([]);
+      setInvites([]);
       setError("找不到这个团队，或你不是成员。请回到「我的团队」再选一次。");
       return;
     }
 
-    const data = await listTeamProjects(token, teamId);
-    setProjects(data.projects);
+    const [projectData, memberData] = await Promise.all([
+      listTeamProjects(token, teamId),
+      listMembers(token, teamId),
+    ]);
+    setProjects(projectData.projects);
+    setMembers(memberData.members);
+
+    if (matched.role === "owner" || matched.role === "admin") {
+      try {
+        const inviteData = await listInvites(token, teamId);
+        setInvites(inviteData.invites.filter((i) => i.status === "pending"));
+      } catch {
+        setInvites([]);
+      }
+    } else {
+      setInvites([]);
+    }
   }, [getToken, teamId]);
 
   useEffect(() => {
@@ -131,9 +171,18 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         setError("拿不到登录 token。请重新登录后再试。");
         return;
       }
-      await createProject(token, teamId, trimmed, description);
+      await createProject(
+        token,
+        teamId,
+        trimmed,
+        description,
+        plannedStart || undefined,
+        plannedEnd || undefined,
+      );
       setName("");
       setDescription("");
+      setPlannedStart("");
+      setPlannedEnd("");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -162,8 +211,62 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
     }
   }
 
+  async function onScheduleChange(
+    projectId: string,
+    start: string,
+    end: string,
+  ) {
+    setUpdatingId(projectId);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError("拿不到登录 token。请重新登录后再试。");
+        return;
+      }
+      const updated = await updateProjectSchedule(
+        token,
+        teamId,
+        projectId,
+        start || null,
+        end || null,
+      );
+      setProjects((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function onCreateInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setInviting(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) {
+        setError("拿不到登录 token。请重新登录后再试。");
+        return;
+      }
+      const invite = await createInvite(token, teamId, {
+        email: inviteEmail.trim() || undefined,
+        role: "member",
+      });
+      setLatestInvitePath(invite.invite_path);
+      setInviteEmail("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setInviting(false);
+    }
+  }
+
   return (
-    <div className="mt-8 space-y-8">
+    <div className="mt-8 space-y-10">
       {team ? (
         <div>
           <p className="text-lg font-medium text-zinc-900">{team.name}</p>
@@ -173,38 +276,117 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         </div>
       ) : null}
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+          成员
+        </h2>
+        {loading ? (
+          <p className="text-sm text-zinc-500">加载中…</p>
+        ) : (
+          <ul className="divide-y divide-zinc-200 border-t border-b border-zinc-200">
+            {members.map((m) => (
+              <li key={m.user_id} className="flex justify-between gap-3 py-2 text-sm">
+                <span className="text-zinc-900">
+                  {m.display_name || m.email || m.clerk_user_id}
+                </span>
+                <span className="text-xs text-zinc-500">{m.role}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {canManageInvites ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+            邀请成员
+          </h2>
+          <p className="text-sm text-zinc-600">
+            生成邀请链接，发给同事。对方登录后打开链接即可加入。
+          </p>
+          <form onSubmit={onCreateInvite} className="flex flex-col gap-3 sm:flex-row">
+            <input
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="对方邮箱（可选备注）"
+              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+            />
+            <button
+              type="submit"
+              disabled={inviting}
+              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+            >
+              {inviting ? "生成中…" : "生成邀请链接"}
+            </button>
+          </form>
+          {latestInvitePath ? (
+            <p className="break-all rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              邀请链接路径：{latestInvitePath}
+              <br />
+              完整地址：{typeof window !== "undefined" ? window.location.origin : ""}
+              {latestInvitePath}
+            </p>
+          ) : null}
+          {invites.length > 0 ? (
+            <ul className="text-xs text-zinc-500">
+              {invites.slice(0, 5).map((inv) => (
+                <li key={inv.id}>
+                  pending · {inv.invite_path}
+                  {inv.email ? ` · ${inv.email}` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
       <form onSubmit={onCreate} className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+          创建项目
+        </h2>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <label className="sr-only" htmlFor="project-name">
-            项目名称
-          </label>
           <input
-            id="project-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如：Q3 官网改版"
             maxLength={120}
-            className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500"
+            className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
           />
           <button
             type="submit"
             disabled={saving || !name.trim() || !team}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
           >
             {saving ? "创建中…" : "创建项目"}
           </button>
         </div>
-        <label className="sr-only" htmlFor="project-description">
-          项目简介（可选）
-        </label>
         <input
-          id="project-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="简介（可选）"
           maxLength={2000}
-          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500"
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+            开始日期
+            <input
+              type="date"
+              value={plannedStart}
+              onChange={(e) => setPlannedStart(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            />
+          </label>
+          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+            结束日期
+            <input
+              type="date"
+              value={plannedEnd}
+              onChange={(e) => setPlannedEnd(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            />
+          </label>
+        </div>
       </form>
 
       {error ? (
@@ -220,24 +402,18 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         {loading ? (
           <p className="mt-3 text-sm text-zinc-500">加载中…</p>
         ) : projects.length === 0 ? (
-          <p className="mt-3 text-sm text-zinc-500">
-            还没有项目。在上面输入名称，点「创建项目」。
-          </p>
+          <p className="mt-3 text-sm text-zinc-500">还没有项目。</p>
         ) : (
           <ul className="mt-3 divide-y divide-zinc-200 border-t border-b border-zinc-200">
             {projects.map((project) => (
-              <li
-                key={project.id}
-                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-zinc-900">{project.name}</p>
-                  <p className="text-xs text-zinc-500">
-                    {project.description ? project.description : "暂无简介"}
-                  </p>
-                </div>
-                <label className="flex items-center gap-2 text-sm text-zinc-700">
-                  <span className="sr-only">项目状态</span>
+              <li key={project.id} className="space-y-3 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-zinc-900">{project.name}</p>
+                    <p className="text-xs text-zinc-500">
+                      {project.description ? project.description : "暂无简介"}
+                    </p>
+                  </div>
                   <select
                     value={
                       project.status === "paused" || project.status === "done"
@@ -246,18 +422,49 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
                     }
                     disabled={updatingId === project.id || !team}
                     onChange={(e) =>
-                      onStatusChange(
-                        project.id,
-                        e.target.value as ProjectStatus,
-                      )
+                      onStatusChange(project.id, e.target.value as ProjectStatus)
                     }
-                    className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-zinc-500 disabled:opacity-50"
+                    className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
                   >
                     <option value="active">{STATUS_LABELS.active}</option>
                     <option value="paused">{STATUS_LABELS.paused}</option>
                     <option value="done">{STATUS_LABELS.done}</option>
                   </select>
-                </label>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    排期开始
+                    <input
+                      type="date"
+                      defaultValue={project.planned_start ?? ""}
+                      key={`${project.id}-start-${project.planned_start}`}
+                      disabled={updatingId === project.id}
+                      onBlur={(e) => {
+                        const start = e.target.value;
+                        const end = project.planned_end ?? "";
+                        if (start === (project.planned_start ?? "")) return;
+                        void onScheduleChange(project.id, start, end);
+                      }}
+                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    排期结束
+                    <input
+                      type="date"
+                      defaultValue={project.planned_end ?? ""}
+                      key={`${project.id}-end-${project.planned_end}`}
+                      disabled={updatingId === project.id}
+                      onBlur={(e) => {
+                        const end = e.target.value;
+                        const start = project.planned_start ?? "";
+                        if (end === (project.planned_end ?? "")) return;
+                        void onScheduleChange(project.id, start, end);
+                      }}
+                      className="rounded-md border border-zinc-300 px-2 py-1.5 text-sm text-zinc-900"
+                    />
+                  </label>
+                </div>
               </li>
             ))}
           </ul>

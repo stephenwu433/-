@@ -2,13 +2,14 @@
 
 当前能力：
 
-1. `GET /health` — 后端是否启动 + 鉴权配置状态
-2. `GET /db/ping` — 能否连上 Neon
-3. `POST /db/smoke-test` — 旧的读写冒烟
-4. `GET /me` — 当前登录用户（需要 Bearer JWT）
-5. `POST /teams` / `GET /teams` — 创建 / 查看**自己的**团队
-6. `POST /teams/{team_id}/projects` / `GET /teams/{team_id}/projects` — 创建 / 查看项目
-7. `PATCH /teams/{team_id}/projects/{project_id}` — 改项目状态（`active` / `paused` / `done`）
+1. `GET /health` — 健康检查  
+2. `GET /me` — 当前用户  
+3. `POST/GET /teams` — 团队  
+4. `POST/GET /teams/{id}/projects` + `PATCH .../{project_id}` — 项目与状态/排期  
+5. `GET /teams/{id}/schedule` — 有日期的项目（日历用）  
+6. `GET /teams/{id}/members` — 成员列表  
+7. `POST/GET /teams/{id}/invites` — 创建/查看邀请（owner/admin）  
+8. `GET /invites/{token}` + `POST /invites/{token}/accept` — 预览与接受邀请  
 
 数据库表（`migrations/001_init_teams.sql`）：`users`、`teams`、`team_members`、`projects`。
 
