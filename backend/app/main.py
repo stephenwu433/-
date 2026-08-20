@@ -11,8 +11,8 @@ from app.schemas import MeResponse
 
 app = FastAPI(
     title="PlanFlow API",
-    description="团队版 PlanFlow 后端（Teams / Projects / Tasks / Invites / Schedule）",
-    version="0.5.0",
+    description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
+    version="0.6.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
@@ -27,6 +27,7 @@ app.add_middleware(
 app.include_router(teams.router)
 app.include_router(projects.router)
 app.include_router(projects.schedule_router)
+app.include_router(projects.portfolio_router)
 app.include_router(members.members_router)
 app.include_router(members.invites_router)
 app.include_router(tasks.router)

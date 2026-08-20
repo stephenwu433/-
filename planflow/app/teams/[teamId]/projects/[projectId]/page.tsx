@@ -6,7 +6,12 @@ import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { listMembers, type TeamMember } from "@/lib/members-api";
-import { listTeamProjects, type Project } from "@/lib/projects-api";
+import {
+  listTeamProjects,
+  updateProject,
+  type Project,
+  type ProjectStatus,
+} from "@/lib/projects-api";
 import {
   createTask,
   deleteTask,
@@ -20,6 +25,12 @@ import { listMyTeams } from "@/lib/teams-api";
 const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   todo: "待办",
   doing: "进行中",
+  done: "已完成",
+};
+
+const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: "进行中",
+  paused: "已暂停",
   done: "已完成",
 };
 
@@ -37,8 +48,34 @@ export default function ProjectTasksPage() {
   const [assignee, setAssignee] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // settings form state
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsDescription, setSettingsDescription] = useState("");
+  const [settingsObjective, setSettingsObjective] = useState("");
+  const [settingsStart, setSettingsStart] = useState("");
+  const [settingsEnd, setSettingsEnd] = useState("");
+  const [settingsOwner, setSettingsOwner] = useState("");
+  const [settingsHours, setSettingsHours] = useState("6");
+  const [settingsStatus, setSettingsStatus] = useState<ProjectStatus>("active");
+  const [settingsConfirmed, setSettingsConfirmed] = useState(false);
+
+  const syncSettingsForm = useCallback((p: Project) => {
+    setSettingsName(p.name);
+    setSettingsDescription(p.description ?? "");
+    setSettingsObjective(p.objective ?? "");
+    setSettingsStart(p.planned_start ?? "");
+    setSettingsEnd(p.planned_end ?? "");
+    setSettingsOwner(p.owner_user_id ?? "");
+    setSettingsHours(String(p.member_daily_hours ?? 6));
+    setSettingsStatus(
+      p.status === "paused" || p.status === "done" ? p.status : "active",
+    );
+    setSettingsConfirmed(Boolean(p.plan_confirmed));
+  }, []);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -64,8 +101,9 @@ export default function ProjectTasksPage() {
     setProject(matched);
     setTasks(tasksPayload.tasks);
     setMembers(membersPayload.members);
-    if (!matched) setError("找不到这个项目。");
-  }, [getToken, teamId, projectId]);
+    if (matched) syncSettingsForm(matched);
+    else setError("找不到这个项目。");
+  }, [getToken, teamId, projectId, syncSettingsForm]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !teamId || !projectId) return;
@@ -107,6 +145,39 @@ export default function ProjectTasksPage() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSaveSettings(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = settingsName.trim();
+    if (!trimmed) return;
+    setSettingsSaving(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const hours = Number(settingsHours);
+      const updated = await updateProject(token, teamId, projectId, {
+        name: trimmed,
+        description: settingsDescription.trim() || null,
+        objective: settingsObjective.trim() || null,
+        status: settingsStatus,
+        planned_start: settingsStart || null,
+        planned_end: settingsEnd || null,
+        clear_schedule: !settingsStart && !settingsEnd,
+        owner_user_id: settingsOwner || null,
+        clear_owner: !settingsOwner,
+        member_daily_hours:
+          Number.isFinite(hours) && hours >= 0 ? hours : 6,
+        plan_confirmed: settingsConfirmed,
+      });
+      setProject(updated);
+      syncSettingsForm(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSettingsSaving(false);
     }
   }
 
@@ -153,12 +224,16 @@ export default function ProjectTasksPage() {
         <Link href={`/teams/${teamId}`} className="underline hover:text-zinc-800">
           ← 返回团队项目
         </Link>
+        {" · "}
+        <Link href="/portfolio" className="underline hover:text-zinc-800">
+          项目总览
+        </Link>
       </p>
       <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-        项目任务
+        项目任务与设置
       </h1>
       <p className="mt-2 text-sm text-zinc-600">
-        项目只是容器；真正干活的是下面这些具体任务。
+        上方改项目设置（目标、排期、负责人、日工时）；下方管理具体任务。
       </p>
 
       {!isLoaded ? (
@@ -179,8 +254,119 @@ export default function ProjectTasksPage() {
               <p className="text-xs text-zinc-500">
                 {project.planned_start || "未设开始"} →{" "}
                 {project.planned_end || "未设结束"} · {project.status}
+                {project.plan_confirmed ? " · 计划已确认" : " · 计划未确认"}
               </p>
             </div>
+          ) : null}
+
+          {project ? (
+            <form onSubmit={onSaveSettings} className="space-y-3">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                项目设置
+              </h2>
+              <input
+                value={settingsName}
+                onChange={(e) => setSettingsName(e.target.value)}
+                placeholder="项目名称"
+                maxLength={120}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              />
+              <input
+                value={settingsDescription}
+                onChange={(e) => setSettingsDescription(e.target.value)}
+                placeholder="简介（可选）"
+                maxLength={2000}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              />
+              <textarea
+                value={settingsObjective}
+                onChange={(e) => setSettingsObjective(e.target.value)}
+                placeholder="项目目标 / 成功标准"
+                maxLength={4000}
+                rows={3}
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  开始日期
+                  <input
+                    type="date"
+                    value={settingsStart}
+                    onChange={(e) => setSettingsStart(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  结束日期
+                  <input
+                    type="date"
+                    value={settingsEnd}
+                    onChange={(e) => setSettingsEnd(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  负责人
+                  <select
+                    value={settingsOwner}
+                    onChange={(e) => setSettingsOwner(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  >
+                    <option value="">未指定</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.display_name || m.email || m.clerk_user_id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  成员日人均工时
+                  <input
+                    type="number"
+                    min={0}
+                    max={24}
+                    step={0.5}
+                    value={settingsHours}
+                    onChange={(e) => setSettingsHours(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  状态
+                  <select
+                    value={settingsStatus}
+                    onChange={(e) =>
+                      setSettingsStatus(e.target.value as ProjectStatus)
+                    }
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  >
+                    <option value="active">{PROJECT_STATUS_LABELS.active}</option>
+                    <option value="paused">{PROJECT_STATUS_LABELS.paused}</option>
+                    <option value="done">{PROJECT_STATUS_LABELS.done}</option>
+                  </select>
+                </label>
+                <label className="flex items-center gap-2 pb-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={settingsConfirmed}
+                    onChange={(e) => setSettingsConfirmed(e.target.checked)}
+                  />
+                  计划已确认
+                </label>
+                <button
+                  type="submit"
+                  disabled={settingsSaving || !settingsName.trim()}
+                  className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                >
+                  {settingsSaving ? "保存中…" : "保存设置"}
+                </button>
+              </div>
+            </form>
           ) : null}
 
           <form onSubmit={onCreate} className="space-y-3">

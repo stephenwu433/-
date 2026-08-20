@@ -22,6 +22,8 @@ import {
 } from "@/lib/projects-api";
 import { listMyTeams, type Team } from "@/lib/teams-api";
 
+const DEFAULT_DAILY_HOURS = 6;
+
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   active: "进行中",
   paused: "已暂停",
@@ -39,6 +41,10 @@ export default function TeamProjectsPage() {
         <Link href="/teams" className="underline hover:text-zinc-800">
           ← 返回我的团队
         </Link>
+        {" · "}
+        <Link href="/portfolio" className="underline hover:text-zinc-800">
+          项目总览
+        </Link>
       </p>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -46,7 +52,7 @@ export default function TeamProjectsPage() {
             团队项目
           </h1>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            管理项目、成员邀请，以及排期日期。
+            管理项目设置、成员邀请，以及排期日期。
           </p>
         </div>
         {teamId ? (
@@ -86,8 +92,11 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [objective, setObjective] = useState("");
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
+  const [ownerUserId, setOwnerUserId] = useState("");
+  const [dailyHours, setDailyHours] = useState(String(DEFAULT_DAILY_HOURS));
   const [inviteEmail, setInviteEmail] = useState("");
   const [latestInvitePath, setLatestInvitePath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,18 +180,24 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         setError("拿不到登录 token。请重新登录后再试。");
         return;
       }
-      await createProject(
-        token,
-        teamId,
-        trimmed,
+      const hours = Number(dailyHours);
+      await createProject(token, teamId, {
+        name: trimmed,
         description,
-        plannedStart || undefined,
-        plannedEnd || undefined,
-      );
+        objective,
+        planned_start: plannedStart || undefined,
+        planned_end: plannedEnd || undefined,
+        owner_user_id: ownerUserId || undefined,
+        member_daily_hours:
+          Number.isFinite(hours) && hours >= 0 ? hours : DEFAULT_DAILY_HOURS,
+      });
       setName("");
       setDescription("");
+      setObjective("");
       setPlannedStart("");
       setPlannedEnd("");
+      setOwnerUserId("");
+      setDailyHours(String(DEFAULT_DAILY_HOURS));
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -344,11 +359,14 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
           创建项目
         </h2>
+        <p className="text-sm text-zinc-600">
+          填写名称、目标、排期、负责人与日人均工时。创建后可在项目页继续改设置。
+        </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例如：Q3 官网改版"
+            placeholder="项目名称，例如：Q3 官网改版"
             maxLength={120}
             className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
           />
@@ -367,6 +385,14 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
           maxLength={2000}
           className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
         />
+        <textarea
+          value={objective}
+          onChange={(e) => setObjective(e.target.value)}
+          placeholder="项目目标 / 成功标准（可选）"
+          maxLength={4000}
+          rows={3}
+          className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+        />
         <div className="flex flex-col gap-3 sm:flex-row">
           <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
             开始日期
@@ -383,6 +409,35 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
               type="date"
               value={plannedEnd}
               onChange={(e) => setPlannedEnd(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            />
+          </label>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+            负责人
+            <select
+              value={ownerUserId}
+              onChange={(e) => setOwnerUserId(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+            >
+              <option value="">默认：我自己</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name || m.email || m.clerk_user_id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+            成员日人均工时
+            <input
+              type="number"
+              min={0}
+              max={24}
+              step={0.5}
+              value={dailyHours}
+              onChange={(e) => setDailyHours(e.target.value)}
               className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
             />
           </label>
@@ -411,7 +466,11 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-900">{project.name}</p>
                     <p className="text-xs text-zinc-500">
-                      {project.description ? project.description : "暂无简介"}
+                      {project.objective || project.description || "暂无目标/简介"}
+                      {" · "}
+                      {project.plan_confirmed ? "计划已确认" : "计划未确认"}
+                      {" · "}
+                      日人均 {project.member_daily_hours ?? DEFAULT_DAILY_HOURS}h
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -419,7 +478,7 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
                       href={`/teams/${teamId}/projects/${project.id}`}
                       className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
                     >
-                      任务
+                      任务 / 设置
                     </Link>
                     <select
                       value={

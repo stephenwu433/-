@@ -80,8 +80,11 @@ class InvitePreviewResponse(BaseModel):
 class ProjectCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
+    objective: str | None = Field(default=None, max_length=4000)
     planned_start: date | None = None
     planned_end: date | None = None
+    owner_user_id: uuid.UUID | None = None
+    member_daily_hours: float = Field(default=6.0, ge=0, le=24)
 
 
 class ProjectResponse(BaseModel):
@@ -89,9 +92,13 @@ class ProjectResponse(BaseModel):
     team_id: uuid.UUID
     name: str
     description: str | None = None
+    objective: str | None = None
     status: str
     planned_start: date | None = None
     planned_end: date | None = None
+    owner_user_id: uuid.UUID | None = None
+    member_daily_hours: float = 6.0
+    plan_confirmed: bool = False
     created_at: datetime
 
 
@@ -103,14 +110,57 @@ PROJECT_STATUSES = ("active", "paused", "done")
 
 
 class ProjectUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=2000)
+    objective: str | None = Field(default=None, max_length=4000)
     status: str | None = Field(default=None, max_length=20)
     planned_start: date | None = None
     planned_end: date | None = None
     clear_schedule: bool = False
+    owner_user_id: uuid.UUID | None = None
+    clear_owner: bool = False
+    member_daily_hours: float | None = Field(default=None, ge=0, le=24)
+    plan_confirmed: bool | None = None
 
 
 class ScheduleResponse(BaseModel):
     projects: list[ProjectResponse]
+
+
+class PortfolioProjectCard(BaseModel):
+    id: uuid.UUID
+    team_id: uuid.UUID
+    team_name: str
+    name: str
+    description: str | None = None
+    objective: str | None = None
+    status: str
+    planned_start: date | None = None
+    planned_end: date | None = None
+    owner_user_id: uuid.UUID | None = None
+    owner_display_name: str | None = None
+    member_daily_hours: float = 6.0
+    plan_confirmed: bool = False
+    member_count: int = 0
+    task_count: int = 0
+    done_task_count: int = 0
+    progress_percent: int = 0
+    day_task_count: int = 0
+    created_at: datetime
+
+
+class PortfolioStats(BaseModel):
+    active_projects: int
+    total_tasks: int
+    day_tasks: int
+    day_task_hours_estimate: float
+    high_load_members: int
+
+
+class PortfolioResponse(BaseModel):
+    view_date: date
+    stats: PortfolioStats
+    projects: list[PortfolioProjectCard]
 
 
 TASK_STATUSES = ("todo", "doing", "done")
