@@ -15,8 +15,8 @@ def require_team_membership(
     *,
     team_id: uuid.UUID,
     user: User,
-) -> Team:
-    """Return the team if the user is a member; otherwise 404/403."""
+) -> tuple[Team, TeamMember]:
+    """Return (team, membership) if the user is a member; otherwise 404."""
     team = db.query(Team).filter(Team.id == team_id).one_or_none()
     if team is None:
         raise HTTPException(
@@ -38,4 +38,20 @@ def require_team_membership(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Team not found",
         )
-    return team
+    return team, membership
+
+
+def require_team_manager(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    user: User,
+) -> tuple[Team, TeamMember]:
+    """Owner/admin can invite; members cannot."""
+    team, membership = require_team_membership(db, team_id=team_id, user=user)
+    if membership.role not in {"owner", "admin"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only owners/admins can manage invites",
+        )
+    return team, membership
