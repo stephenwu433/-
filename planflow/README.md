@@ -18,10 +18,10 @@ npm run dev
 
 1. `/teams` 我的团队  
 2. `/teams/{id}` 项目、成员、邀请、项目排期  
-3. `/teams/{id}/projects/{projectId}` **具体任务**（待办/进行中/完成、负责人、截止日期）  
+3. `/teams/{id}/projects/{projectId}` 具体任务  
 4. `/teams/{id}/calendar` 排期日历  
 5. `/invites/{token}` 接受邀请  
 
-## 说明
+## 下一步
 
-仓库里的「梅见」文档是另一套品牌洞察系统。当前 PlanFlow 做的是**团队协作排期**主链路；洞察/飞书等可后续再接。
+按你新上传的产品说明继续补能力；或接入飞书机器人。
