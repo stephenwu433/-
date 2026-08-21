@@ -281,3 +281,37 @@ class TaskTimeEntry(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class ProjectDailyReport(Base):
+    __tablename__ = "project_daily_reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "report_date", name="uq_project_daily_reports_project_date"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    team_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    report_date: Mapped[date] = mapped_column(Date, nullable=False)
+    summary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    next_actions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
