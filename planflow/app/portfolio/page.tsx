@@ -112,12 +112,20 @@ function PortfolioPanel() {
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
           />
         </label>
-        <Link
-          href="/teams"
-          className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
-        >
-          管理团队 / 新建项目
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/workload"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+          >
+            跨项目负荷
+          </Link>
+          <Link
+            href="/teams"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+          >
+            管理团队 / 新建项目
+          </Link>
+        </div>
       </div>
 
       {error ? (

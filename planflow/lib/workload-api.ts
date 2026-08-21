@@ -1,0 +1,43 @@
+/**
+ * Cross-project member workload API.
+ */
+
+import { apiFetch } from "./api-client";
+
+export type WorkloadProjectSlice = {
+  project_id: string;
+  team_id: string;
+  project_name: string;
+  team_name: string;
+  due_task_count: number;
+  logged_hours: number;
+  member_daily_hours: number;
+};
+
+export type WorkloadMember = {
+  user_id: string;
+  display_name: string;
+  project_count: number;
+  due_task_count: number;
+  logged_hours: number;
+  capacity_hours: number;
+  load_ratio: number;
+  projects_per_day: number;
+  overloaded: boolean;
+  projects: WorkloadProjectSlice[];
+};
+
+export type WorkloadResponse = {
+  view_date: string;
+  month_start: string;
+  month_end: string;
+  weekday_count: number;
+  member_count: number;
+  overloaded_count: number;
+  members: WorkloadMember[];
+};
+
+export function getWorkload(token: string, viewDate?: string) {
+  const qs = viewDate ? `?view_date=${encodeURIComponent(viewDate)}` : "";
+  return apiFetch<WorkloadResponse>(`/workload${qs}`, token);
+}

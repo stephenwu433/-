@@ -238,6 +238,39 @@ class DailyTasksResponse(BaseModel):
     tasks: list[DailyTaskCard]
 
 
+class WorkloadProjectSlice(BaseModel):
+    project_id: uuid.UUID
+    team_id: uuid.UUID
+    project_name: str
+    team_name: str
+    due_task_count: int = 0
+    logged_hours: float = 0.0
+    member_daily_hours: float = 6.0
+
+
+class WorkloadMemberCard(BaseModel):
+    user_id: uuid.UUID
+    display_name: str
+    project_count: int
+    due_task_count: int
+    logged_hours: float
+    capacity_hours: float
+    load_ratio: float
+    projects_per_day: float
+    overloaded: bool
+    projects: list[WorkloadProjectSlice] = Field(default_factory=list)
+
+
+class WorkloadResponse(BaseModel):
+    view_date: date
+    month_start: date
+    month_end: date
+    weekday_count: int
+    member_count: int
+    overloaded_count: int
+    members: list[WorkloadMemberCard]
+
+
 PHASE_WORK_ITEM_STATUSES = ("todo", "doing", "done")
 
 DEFAULT_PHASE_NAMES = (
