@@ -139,6 +139,13 @@ export default function DailyTasksPage() {
         </Link>
         {" · "}
         <Link
+          href={`/teams/${teamId}/projects/${projectId}/report`}
+          className="underline hover:text-zinc-800"
+        >
+          项目日报
+        </Link>
+        {" · "}
+        <Link
           href={`/teams/${teamId}/projects/${projectId}/schedule`}
           className="underline hover:text-zinc-800"
         >

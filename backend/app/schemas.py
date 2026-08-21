@@ -346,3 +346,38 @@ class GenerateCycleScheduleRequest(BaseModel):
     replace_existing: bool = True
     phase_count: int = Field(default=5, ge=2, le=8)
 
+
+class DailyReportWorkItem(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    status: str
+    assignee_user_id: uuid.UUID | None = None
+    assignee_display_name: str | None = None
+    due_date: date | None = None
+    logged_hours: float = 0.0
+    notes: list[str] = Field(default_factory=list)
+
+
+class DailyReportSaveRequest(BaseModel):
+    summary_text: str | None = Field(default=None, max_length=4000)
+    next_actions: str | None = Field(default=None, max_length=4000)
+
+
+class DailyReportResponse(BaseModel):
+    view_date: date
+    project_id: uuid.UUID
+    team_id: uuid.UUID
+    project_name: str
+    project_status: str
+    progress_percent: int
+    total_tasks: int
+    done_tasks: int
+    day_task_count: int
+    day_logged_hours: float
+    auto_summary: str
+    summary_text: str | None = None
+    next_actions: str | None = None
+    saved: bool = False
+    work_items: list[DailyReportWorkItem] = Field(default_factory=list)
+
+
