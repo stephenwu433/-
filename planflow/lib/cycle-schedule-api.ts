@@ -272,8 +272,10 @@ export type DailyPlanAssignment = {
   phase_name: string;
   title: string;
   assignee_user_id: string | null;
+  assignee_job_title: string | null;
   planned_hours: number;
   status: string;
+  matched_job: string | null;
 };
 
 export type DailyPlanDay = {
@@ -309,6 +311,7 @@ export function expandCycleScheduleToDaily(
     create_tasks?: boolean;
     pin_work_item_dates?: boolean;
     mark_confirmed?: boolean;
+    assign_by_job?: boolean;
   } = {},
 ) {
   return apiFetch<DailyPlan>(`${base(teamId, projectId)}/expand-daily`, token, {
@@ -318,6 +321,7 @@ export function expandCycleScheduleToDaily(
       create_tasks: input.create_tasks ?? true,
       pin_work_item_dates: input.pin_work_item_dates ?? true,
       mark_confirmed: input.mark_confirmed ?? false,
+      assign_by_job: input.assign_by_job ?? true,
     }),
   });
 }

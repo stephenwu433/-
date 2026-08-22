@@ -266,10 +266,27 @@ def main() -> int:
             },
         )
         regen.raise_for_status()
+        # Set job titles then expand by job
+        me_job = client.patch(
+            f"/teams/{team_id}/members/{user_id}",
+            headers=headers,
+            json={"job_title": "pm"},
+        )
+        me_job.raise_for_status()
+        if me_job.json().get("job_title") != "pm":
+            print("ERROR: job_title not saved", file=sys.stderr)
+            return 1
+        print("job_title OK")
+
         expanded = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/expand-daily",
             headers=headers,
-            json={"weekdays_only": True, "create_tasks": True, "pin_work_item_dates": True},
+            json={
+                "weekdays_only": True,
+                "create_tasks": True,
+                "pin_work_item_dates": True,
+                "assign_by_job": True,
+            },
         )
         expanded.raise_for_status()
         plan = expanded.json()

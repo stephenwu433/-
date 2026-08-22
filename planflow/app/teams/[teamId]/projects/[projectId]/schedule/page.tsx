@@ -24,7 +24,7 @@ import {
   type SeedMode,
   type WorkItemStatus,
 } from "@/lib/cycle-schedule-api";
-import { listMembers, type TeamMember } from "@/lib/members-api";
+import { listMembers, updateMemberJobTitle, JOB_TITLE_LABELS, type JobTitle, type TeamMember } from "@/lib/members-api";
 import { listTeamProjects } from "@/lib/projects-api";
 import { listTasks, type Task } from "@/lib/tasks-api";
 import { listMyTeams } from "@/lib/teams-api";
@@ -147,21 +147,9 @@ export default function ProjectCycleSchedulePage() {
       if (payload.phases[0]) setImportPhaseId(payload.phases[0].id);
       const tasksPayload = await listTasks(token, teamId, projectId);
       setTasks(tasksPayload.tasks);
-      // After generating from requirements, auto-expand into daily plan.
-      if (mode === "from_requirements") {
-        const plan = await expandCycleScheduleToDaily(token, teamId, projectId, {
-          weekdays_only: weekdaysOnly,
-          create_tasks: createTasks,
-          pin_work_item_dates: true,
-        });
-        setDailyPlan(plan);
-        if (plan.schedule) setSchedule(plan.schedule);
-        const tasksAfter = await listTasks(token, teamId, projectId);
-        setTasks(tasksAfter.tasks);
-      } else {
-        const plan = await getDailyPlan(token, teamId, projectId).catch(() => null);
-        setDailyPlan(plan);
-      }
+      // Overall schedule only — personal daily assignment is a separate step.
+      const plan = await getDailyPlan(token, teamId, projectId).catch(() => null);
+      setDailyPlan(plan);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -175,15 +163,42 @@ export default function ProjectCycleSchedulePage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
+      const missingJobs = members.filter((m) => !m.job_title);
+      if (missingJobs.length === members.length) {
+        throw new Error("请先为成员设置岗位（产品/设计/前端/后端/测试等），再按岗位分派。");
+      }
       const plan = await expandCycleScheduleToDaily(token, teamId, projectId, {
         weekdays_only: weekdaysOnly,
         create_tasks: true,
         pin_work_item_dates: true,
+        assign_by_job: true,
       });
       setDailyPlan(plan);
       if (plan.schedule) setSchedule(plan.schedule);
       const tasksPayload = await listTasks(token, teamId, projectId);
       setTasks(tasksPayload.tasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSetMemberJob(userId: string, jobTitle: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const updated = await updateMemberJobTitle(
+        token,
+        teamId,
+        userId,
+        jobTitle || null,
+      );
+      setMembers((prev) =>
+        prev.map((m) => (m.user_id === userId ? { ...m, job_title: updated.job_title } : m)),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -430,7 +445,7 @@ export default function ProjectCycleSchedulePage() {
         {schedule?.project_name || "项目"} · 全局周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        写出需求后生成全周期阶段，并自动排到「每一天具体做什么」；也可在「每日任务」按天执行。
+        两步走：① 根据需求生成总体排期；② 按成员岗位把工作拆到每个人、每一天。
       </p>
 
       {!isLoaded ? (
@@ -533,7 +548,7 @@ export default function ProjectCycleSchedulePage() {
                       onClick={() => void onGenerate(true, "from_requirements")}
                       className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                     >
-                      {busy ? "生成中…" : "生成全周期排期"}
+                      {busy ? "生成中…" : "① 生成总体排期"}
                     </button>
                   </div>
                   <details className="mx-auto mt-6 max-w-2xl text-sm text-zinc-600">
@@ -631,9 +646,9 @@ export default function ProjectCycleSchedulePage() {
                           type="button"
                           disabled={busy || schedule.work_item_count === 0}
                           onClick={() => void onExpandDaily()}
-                          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                          className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                         >
-                          {busy ? "展开中…" : "重新展开为每日排期"}
+                          {busy ? "分派中…" : "② 按岗位分派每人每日任务"}
                         </button>
                         <Link
                           href={`/teams/${teamId}/projects/${projectId}/daily`}
@@ -642,6 +657,41 @@ export default function ProjectCycleSchedulePage() {
                           打开每日任务
                         </Link>
                       </div>
+                    </div>
+
+                    <div className="mb-4 rounded-md border border-zinc-200 px-4 py-3">
+                      <p className="text-xs font-medium text-zinc-500">
+                        成员岗位（分派前请先设置）
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {members.map((m) => (
+                          <li
+                            key={m.user_id}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <span className="text-zinc-800">
+                              {m.display_name || m.email || m.clerk_user_id}
+                            </span>
+                            <select
+                              value={m.job_title || ""}
+                              disabled={busy}
+                              onChange={(e) =>
+                                void onSetMemberJob(m.user_id, e.target.value)
+                              }
+                              className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+                            >
+                              <option value="">未设置岗位</option>
+                              {(Object.keys(JOB_TITLE_LABELS) as JobTitle[]).map(
+                                (key) => (
+                                  <option key={key} value={key}>
+                                    {JOB_TITLE_LABELS[key]}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                     <ul className="flex gap-3 overflow-x-auto pb-1">
                       {schedule.phases.map((phase, index) => (
@@ -796,17 +846,17 @@ export default function ProjectCycleSchedulePage() {
                   <section>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
-                        每日具体排期
+                        每人每日任务
                       </h2>
                       <p className="text-xs text-zinc-500">
                         {dailyPlan
                           ? `${dailyPlan.day_count} 天 · ${dailyPlan.assigned_work_item_count} 项`
-                          : "生成需求排期后会自动展开到每一天"}
+                          : "完成第②步后，这里按天列出每个人的任务"}
                       </p>
                     </div>
                     {!dailyPlan || dailyPlan.days.length === 0 ? (
                       <div className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-600">
-                        还没有按天排期。点「重新展开为每日排期」，系统会按阶段日期与工时容量，把工作项落到具体日期。
+                        先生成总体排期，再点「按岗位分派每人每日任务」。系统会按工作项类型匹配产品/设计/研发/测试等岗位。
                       </div>
                     ) : (
                       <ul className="space-y-3">
@@ -842,6 +892,17 @@ export default function ProjectCycleSchedulePage() {
                                   </span>
                                   <span className="text-xs text-zinc-500">
                                     {a.planned_hours}h · {memberLabel(a.assignee_user_id)}
+                                    {a.assignee_job_title || a.matched_job
+                                      ? `（${
+                                          JOB_TITLE_LABELS[
+                                            (a.assignee_job_title ||
+                                              a.matched_job ||
+                                              "") as JobTitle
+                                          ] ||
+                                          a.assignee_job_title ||
+                                          a.matched_job
+                                        }）`
+                                      : ""}
                                   </span>
                                 </li>
                               ))}

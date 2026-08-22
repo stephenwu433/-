@@ -9,7 +9,10 @@ import {
   createInvite,
   listInvites,
   listMembers,
+  updateMemberJobTitle,
+  JOB_TITLE_LABELS,
   type Invite,
+  type JobTitle,
   type TeamMember,
 } from "@/lib/members-api";
 import {
@@ -300,11 +303,51 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
         ) : (
           <ul className="divide-y divide-zinc-200 border-t border-b border-zinc-200">
             {members.map((m) => (
-              <li key={m.user_id} className="flex justify-between gap-3 py-2 text-sm">
+              <li
+                key={m.user_id}
+                className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
+              >
                 <span className="text-zinc-900">
                   {m.display_name || m.email || m.clerk_user_id}
+                  <span className="ml-2 text-xs text-zinc-400">{m.role}</span>
                 </span>
-                <span className="text-xs text-zinc-500">{m.role}</span>
+                <select
+                  value={m.job_title || ""}
+                  disabled={saving}
+                  onChange={async (e) => {
+                    setSaving(true);
+                    setError(null);
+                    try {
+                      const token = await getToken();
+                      if (!token) throw new Error("拿不到登录 token");
+                      const updated = await updateMemberJobTitle(
+                        token,
+                        teamId,
+                        m.user_id,
+                        e.target.value || null,
+                      );
+                      setMembers((prev) =>
+                        prev.map((x) =>
+                          x.user_id === m.user_id
+                            ? { ...x, job_title: updated.job_title }
+                            : x,
+                        ),
+                      );
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : String(err));
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  className="rounded-md border border-zinc-300 px-2 py-1 text-xs"
+                >
+                  <option value="">未设置岗位</option>
+                  {(Object.keys(JOB_TITLE_LABELS) as JobTitle[]).map((key) => (
+                    <option key={key} value={key}>
+                      {JOB_TITLE_LABELS[key]}
+                    </option>
+                  ))}
+                </select>
               </li>
             ))}
           </ul>

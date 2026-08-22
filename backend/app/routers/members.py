@@ -18,8 +18,10 @@ from app.schemas import (
     InviteListResponse,
     InvitePreviewResponse,
     InviteResponse,
+    JOB_TITLES,
     TeamMemberListResponse,
     TeamMemberResponse,
+    TeamMemberUpdateRequest,
 )
 
 members_router = APIRouter(prefix="/teams/{team_id}", tags=["members"])
@@ -62,11 +64,62 @@ def list_members(
             email=user.email,
             display_name=user.display_name,
             role=member.role,
+            job_title=member.job_title,
             joined_at=member.created_at,
         )
         for member, user in rows
     ]
     return TeamMemberListResponse(members=members)
+
+
+@members_router.patch("/members/{user_id}", response_model=TeamMemberResponse)
+def update_member(
+    team_id: uuid.UUID,
+    user_id: uuid.UUID,
+    body: TeamMemberUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TeamMemberResponse:
+    """Update a member's job position (岗位). Managers or the member themselves."""
+    _team, membership = require_team_membership(db, team_id=team_id, user=current_user)
+    is_manager = membership.role in {"owner", "admin"}
+    if not is_manager and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Only managers can edit other members")
+
+    row = (
+        db.query(TeamMember, User)
+        .join(User, User.id == TeamMember.user_id)
+        .filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
+        .one_or_none()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    member, user = row
+
+    if body.clear_job_title:
+        member.job_title = None
+    elif body.job_title is not None:
+        job = body.job_title.strip().lower()
+        if job == "":
+            member.job_title = None
+        elif job not in JOB_TITLES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"job_title must be one of: {', '.join(JOB_TITLES)}",
+            )
+        else:
+            member.job_title = job
+
+    db.commit()
+    return TeamMemberResponse(
+        user_id=user.id,
+        clerk_user_id=user.clerk_user_id,
+        email=user.email,
+        display_name=user.display_name,
+        role=member.role,
+        job_title=member.job_title,
+        joined_at=member.created_at,
+    )
 
 
 @members_router.post(
@@ -190,6 +243,7 @@ def accept_invite(
             email=current_user.email,
             display_name=current_user.display_name,
             role=existing.role,
+            job_title=existing.job_title,
             joined_at=existing.created_at,
         )
 
@@ -211,5 +265,6 @@ def accept_invite(
         email=current_user.email,
         display_name=current_user.display_name,
         role=membership.role,
+        job_title=membership.job_title,
         joined_at=membership.created_at,
     )

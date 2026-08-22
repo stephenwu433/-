@@ -1040,6 +1040,21 @@ def expand_cycle_schedule_to_daily(
     updated_tasks = 0
     assigned = 0
 
+    job_pools = _load_job_pools(db, team_id=team_id) if opts.assign_by_job else {}
+    all_member_ids = [
+        row[0]
+        for row in db.query(TeamMember.user_id)
+        .filter(TeamMember.team_id == team_id)
+        .order_by(TeamMember.created_at.asc())
+        .all()
+    ]
+    # job_title lookup by user
+    job_by_user = {
+        m.user_id: (m.job_title or None)
+        for m in db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    }
+    person_day_load: dict[tuple[uuid.UUID, date], float] = {}
+
     # day -> list of assignment dicts for response
     day_map: dict[date, list[dict]] = {}
 
@@ -1082,6 +1097,8 @@ def expand_cycle_schedule_to_daily(
             if hours <= 0:
                 hours = round(max(daily_cap * 0.35, 0.5), 1)
 
+            preferred_job = _infer_job_from_title(item.title)
+
             item_days = days
             if item.planned_start and item.planned_end:
                 narrowed = [
@@ -1102,7 +1119,6 @@ def expand_cycle_schedule_to_daily(
                 if room >= 0.25:
                     take = min(remaining, room)
                 else:
-                    # All days are full — still place leftover on least-loaded day.
                     take = remaining
                 take = round(take, 1)
                 if take <= 0:
@@ -1117,7 +1133,19 @@ def expand_cycle_schedule_to_daily(
                 item.planned_start = primary_day
                 item.planned_end = last_day
 
-            assignee = item.assignee_user_id or default_assignee
+            matched_job: str | None = None
+            if opts.assign_by_job:
+                assignee, matched_job = _pick_assignee_for_job(
+                    preferred_job=preferred_job,
+                    pools=job_pools,
+                    person_day_load=person_day_load,
+                    day=primary_day,
+                    default_assignee=default_assignee,
+                    all_member_ids=all_member_ids,
+                )
+                item.assignee_user_id = assignee
+            else:
+                assignee = item.assignee_user_id or default_assignee
 
             for chunk_index, (day, chunk_hours) in enumerate(chunks):
                 title = (
@@ -1125,13 +1153,31 @@ def expand_cycle_schedule_to_daily(
                     if len(chunks) == 1
                     else f"{item.title}（{day.isoformat()}）"
                 )
+                # Re-pick by person capacity on this specific day when assigning by job
+                chunk_assignee = assignee
+                chunk_matched = matched_job
+                if opts.assign_by_job:
+                    chunk_assignee, chunk_matched = _pick_assignee_for_job(
+                        preferred_job=preferred_job,
+                        pools=job_pools,
+                        person_day_load=person_day_load,
+                        day=day,
+                        default_assignee=default_assignee,
+                        all_member_ids=all_member_ids,
+                    )
+                    if chunk_index == 0:
+                        item.assignee_user_id = chunk_assignee
+                person_day_load[(chunk_assignee, day)] = (
+                    person_day_load.get((chunk_assignee, day), 0.0) + chunk_hours
+                )
+
                 task_id = None
                 if chunk_index == 0 and item.task_id is not None:
                     task = db.query(Task).filter(Task.id == item.task_id).one_or_none()
                     if task is not None:
                         task.due_date = day
                         task.title = item.title
-                        task.assignee_user_id = assignee
+                        task.assignee_user_id = chunk_assignee
                         task_id = task.id
                         updated_tasks += 1
                     else:
@@ -1151,7 +1197,7 @@ def expand_cycle_schedule_to_daily(
                         status=item.status
                         if item.status in PHASE_WORK_ITEM_STATUSES
                         else "todo",
-                        assignee_user_id=assignee,
+                        assignee_user_id=chunk_assignee,
                         due_date=day,
                         sort_order=(max_order[0] + 1) if max_order else 0,
                         created_by_user_id=current_user.id,
@@ -1170,9 +1216,11 @@ def expand_cycle_schedule_to_daily(
                         "phase_id": phase.id,
                         "phase_name": phase.name,
                         "title": title[:200],
-                        "assignee_user_id": assignee,
+                        "assignee_user_id": chunk_assignee,
+                        "assignee_job_title": job_by_user.get(chunk_assignee),
                         "planned_hours": chunk_hours,
                         "status": item.status,
+                        "matched_job": chunk_matched or preferred_job,
                     }
                 )
             assigned += 1
@@ -1191,8 +1239,9 @@ def expand_cycle_schedule_to_daily(
         category="周期",
         title="已展开每日工作排期",
         body=(
-            f"「{project.name}」已把阶段工作项排到具体日期"
-            f"（{assigned} 项 → {created_tasks} 新建 / {updated_tasks} 更新任务）。"
+            f"「{project.name}」已按阶段日期"
+            f"{'与岗位' if opts.assign_by_job else ''}"
+            f"展开每日任务（{assigned} 项 → {created_tasks} 新建 / {updated_tasks} 更新）。"
         ),
         link_path=f"/teams/{team_id}/projects/{project.id}/daily",
         exclude_user_id=current_user.id,
@@ -1243,6 +1292,10 @@ def get_daily_plan(
     )
 
     day_map: dict[date, list[dict]] = {}
+    job_by_user = {
+        m.user_id: (m.job_title or None)
+        for m in db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    }
     for item, phase in items:
         # Prefer linked task due_date; else work item start day
         day = None
@@ -1265,8 +1318,12 @@ def get_daily_plan(
                 "phase_name": phase.name,
                 "title": item.title,
                 "assignee_user_id": item.assignee_user_id,
+                "assignee_job_title": job_by_user.get(item.assignee_user_id)
+                if item.assignee_user_id
+                else None,
                 "planned_hours": float(item.estimated_hours or 0),
                 "status": item.status,
+                "matched_job": _infer_job_from_title(item.title),
             }
         )
 
@@ -1298,13 +1355,118 @@ def _iter_days(start: date, end: date, *, weekdays_only: bool) -> list[date]:
     return days
 
 
+def _infer_job_from_title(title: str) -> str:
+    """Map work-item title to a job_title bucket."""
+    t = (title or "").lower()
+    # Chinese prefixes from from_requirements seeding
+    if any(k in title for k in ("设计方案", "高保真", "交互", "视觉", "UI", "UX")):
+        return "designer"
+    if any(k in title for k in ("验收确认", "测试", "联调", "QA", "质量")):
+        return "qa"
+    if any(k in title for k in ("上线", "发布", "运维", "部署", "交付培训")):
+        return "ops"
+    if any(k in title for k in ("开发实现", "后端", "接口", "API", "数据库")):
+        return "backend"
+    if any(k in title for k in ("前端", "页面", "组件")):
+        return "frontend"
+    if any(
+        k in title
+        for k in (
+            "澄清需求",
+            "确认项目目标",
+            "对齐干系人",
+            "交付核对",
+            "周期复盘",
+            "目标",
+            "需求",
+            "产品",
+        )
+    ):
+        return "pm"
+    if "设计" in title:
+        return "designer"
+    if "开发" in title or "实现" in title:
+        return "fullstack"
+    if "验收" in title or "测试" in title:
+        return "qa"
+    # English fallbacks
+    if "design" in t:
+        return "designer"
+    if "test" in t or "qa" in t:
+        return "qa"
+    if "deploy" in t or "ops" in t:
+        return "ops"
+    if "front" in t:
+        return "frontend"
+    if "back" in t or "api" in t:
+        return "backend"
+    return "pm"
+
+
+def _job_fallback_chain(job: str) -> list[str]:
+    chains = {
+        "pm": ["pm", "fullstack", "frontend", "backend"],
+        "designer": ["designer", "frontend", "pm"],
+        "frontend": ["frontend", "fullstack", "backend", "pm"],
+        "backend": ["backend", "fullstack", "frontend", "pm"],
+        "fullstack": ["fullstack", "frontend", "backend", "pm"],
+        "qa": ["qa", "backend", "fullstack", "pm"],
+        "ops": ["ops", "backend", "fullstack", "pm"],
+    }
+    return chains.get(job, ["pm", "fullstack", "frontend", "backend", "qa", "ops"])
+
+
+def _load_job_pools(
+    db: Session, *, team_id: uuid.UUID
+) -> dict[str, list[uuid.UUID]]:
+    rows = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id)
+        .order_by(TeamMember.created_at.asc())
+        .all()
+    )
+    pools: dict[str, list[uuid.UUID]] = {}
+    for member in rows:
+        job = (member.job_title or "").strip().lower()
+        if not job:
+            continue
+        pools.setdefault(job, []).append(member.user_id)
+    return pools
+
+
+def _pick_assignee_for_job(
+    *,
+    preferred_job: str,
+    pools: dict[str, list[uuid.UUID]],
+    person_day_load: dict[tuple[uuid.UUID, date], float],
+    day: date,
+    default_assignee: uuid.UUID,
+    all_member_ids: list[uuid.UUID],
+) -> tuple[uuid.UUID, str | None]:
+    for job in _job_fallback_chain(preferred_job):
+        candidates = pools.get(job) or []
+        if not candidates:
+            continue
+        chosen = min(
+            candidates,
+            key=lambda uid: (person_day_load.get((uid, day), 0.0), str(uid)),
+        )
+        return chosen, job
+    if all_member_ids:
+        chosen = min(
+            all_member_ids,
+            key=lambda uid: (person_day_load.get((uid, day), 0.0), str(uid)),
+        )
+        return chosen, None
+    return default_assignee, None
+
+
 def _build_daily_plan_days(day_map: dict[date, list[dict]]) -> list[DailyPlanDay]:
     result: list[DailyPlanDay] = []
     for day in sorted(day_map.keys()):
         assignments = day_map[day]
         phase_id = assignments[0]["phase_id"] if assignments else None
         phase_name = assignments[0]["phase_name"] if assignments else None
-        # If multiple phases on same day, leave phase blank-ish using first
         total = round(sum(float(a["planned_hours"]) for a in assignments), 1)
         result.append(
             DailyPlanDay(
@@ -1320,8 +1482,10 @@ def _build_daily_plan_days(day_map: dict[date, list[dict]]) -> list[DailyPlanDay
                         phase_name=a["phase_name"],
                         title=a["title"],
                         assignee_user_id=a["assignee_user_id"],
+                        assignee_job_title=a.get("assignee_job_title"),
                         planned_hours=float(a["planned_hours"]),
                         status=a["status"],
+                        matched_job=a.get("matched_job"),
                     )
                     for a in assignments
                 ],
