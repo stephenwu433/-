@@ -391,6 +391,52 @@ class ImportTasksRequest(BaseModel):
     only_unlinked: bool = True
 
 
+class ExpandDailyScheduleRequest(BaseModel):
+    """Pack phase work items onto concrete calendar days (for 每日任务)."""
+
+    weekdays_only: bool = True
+    # If true, also create/update linked Task.due_date for each packed day.
+    create_tasks: bool = True
+    # Shrink each work item's planned_start/end to the assigned day.
+    pin_work_item_dates: bool = True
+    mark_confirmed: bool = False
+
+
+class DailyPlanAssignment(BaseModel):
+    work_item_id: uuid.UUID
+    task_id: uuid.UUID | None = None
+    phase_id: uuid.UUID
+    phase_name: str
+    title: str
+    assignee_user_id: uuid.UUID | None = None
+    planned_hours: float = 0.0
+    status: str = "todo"
+
+
+class DailyPlanDay(BaseModel):
+    date: date
+    phase_id: uuid.UUID | None = None
+    phase_name: str | None = None
+    total_planned_hours: float = 0.0
+    assignments: list[DailyPlanAssignment] = Field(default_factory=list)
+
+
+class DailyPlanResponse(BaseModel):
+    project_id: uuid.UUID
+    team_id: uuid.UUID
+    project_name: str
+    planned_start: date | None = None
+    planned_end: date | None = None
+    member_daily_hours: float = 6.0
+    weekdays_only: bool = True
+    assigned_work_item_count: int = 0
+    created_task_count: int = 0
+    updated_task_count: int = 0
+    day_count: int = 0
+    days: list[DailyPlanDay] = Field(default_factory=list)
+    # Full schedule snapshot after expand (optional convenience for UI refresh)
+    schedule: ProjectCycleScheduleResponse | None = None
+
 
 class DailyReportWorkItem(BaseModel):
     task_id: uuid.UUID

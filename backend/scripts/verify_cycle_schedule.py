@@ -254,6 +254,66 @@ def main() -> int:
             return 1
         print("phase CRUD OK")
 
+        # Re-generate from requirements then expand to daily plan
+        regen = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
+            headers=headers,
+            json={
+                "replace_existing": True,
+                "seed_mode": "from_requirements",
+                "requirements_text": "- 登录\n- 排期看板",
+                "create_tasks": True,
+            },
+        )
+        regen.raise_for_status()
+        expanded = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/expand-daily",
+            headers=headers,
+            json={"weekdays_only": True, "create_tasks": True, "pin_work_item_dates": True},
+        )
+        expanded.raise_for_status()
+        plan = expanded.json()
+        print(
+            "expand-daily:",
+            json.dumps(
+                {
+                    "day_count": plan["day_count"],
+                    "assigned_work_item_count": plan["assigned_work_item_count"],
+                    "created_task_count": plan["created_task_count"],
+                    "updated_task_count": plan["updated_task_count"],
+                    "first_day": plan["days"][0]["date"] if plan["days"] else None,
+                    "first_day_items": len(plan["days"][0]["assignments"]) if plan["days"] else 0,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+        if plan["day_count"] < 1 or plan["assigned_work_item_count"] < 1:
+            print("ERROR: expand-daily produced empty plan", file=sys.stderr)
+            return 1
+        # Daily tasks on first day should include at least one assignment
+        first = plan["days"][0]["date"]
+        daily = client.get(
+            f"/teams/{team_id}/projects/{project_id}/daily-tasks",
+            headers=headers,
+            params={"view_date": first},
+        )
+        daily.raise_for_status()
+        if int(daily.json().get("task_count") or 0) < 1:
+            print("ERROR: daily-tasks empty after expand", daily.json(), file=sys.stderr)
+            return 1
+        print("expand-daily OK")
+
+        preview = client.get(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/daily-plan",
+            headers=headers,
+        )
+        preview.raise_for_status()
+        if preview.json()["day_count"] < 1:
+            print("ERROR: daily-plan preview empty", file=sys.stderr)
+            return 1
+        print("daily-plan GET OK")
+
         confirmed = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/confirm",
             headers=headers,

@@ -17,6 +17,10 @@ from app.schemas import (
     DEFAULT_PHASE_NAMES,
     PHASE_WORK_ITEM_STATUSES,
     REQUIREMENT_CYCLE_PHASE_NAMES,
+    DailyPlanAssignment,
+    DailyPlanDay,
+    DailyPlanResponse,
+    ExpandDailyScheduleRequest,
     GenerateCycleScheduleRequest,
     ImportTasksRequest,
     PhaseWorkItemCreateRequest,
@@ -1000,6 +1004,330 @@ def import_tasks_into_schedule(
     db.commit()
     db.refresh(project)
     return _build_schedule_response(db, project)
+
+
+@router.post("/expand-daily", response_model=DailyPlanResponse)
+def expand_cycle_schedule_to_daily(
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    body: ExpandDailyScheduleRequest | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DailyPlanResponse:
+    """Pack each phase's work items onto concrete days within that phase window.
+
+    Updates Task.due_date so 「每日任务」 shows the day-by-day plan.
+    """
+    require_team_membership(db, team_id=team_id, user=current_user)
+    project = _require_project(db, team_id=team_id, project_id=project_id)
+    opts = body or ExpandDailyScheduleRequest()
+
+    phases = (
+        db.query(ProjectPhase)
+        .filter(ProjectPhase.project_id == project.id)
+        .order_by(ProjectPhase.sort_order.asc(), ProjectPhase.created_at.asc())
+        .all()
+    )
+    if not phases:
+        raise HTTPException(
+            status_code=400,
+            detail="请先生成全周期排期，再展开为每日工作安排。",
+        )
+
+    daily_cap = float(project.member_daily_hours or 6.0)
+    default_assignee = project.owner_user_id or current_user.id
+    created_tasks = 0
+    updated_tasks = 0
+    assigned = 0
+
+    # day -> list of assignment dicts for response
+    day_map: dict[date, list[dict]] = {}
+
+    for phase in phases:
+        items = (
+            db.query(PhaseWorkItem)
+            .filter(PhaseWorkItem.phase_id == phase.id)
+            .order_by(PhaseWorkItem.sort_order.asc(), PhaseWorkItem.created_at.asc())
+            .all()
+        )
+        if not items:
+            continue
+
+        window_start = phase.planned_start or project.planned_start
+        window_end = phase.planned_end or project.planned_end
+        if window_start is None or window_end is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"阶段「{phase.name}」缺少日期，无法展开每日排期。",
+            )
+        if window_end < window_start:
+            window_start, window_end = window_end, window_start
+
+        days = _iter_days(window_start, window_end, weekdays_only=opts.weekdays_only)
+        if not days:
+            days = _iter_days(window_start, window_end, weekdays_only=False)
+        if not days:
+            continue
+
+        # Remaining capacity per day (shared across phases if dates overlap)
+        for d in days:
+            day_map.setdefault(d, [])
+
+        loads: dict[date, float] = {
+            d: sum(float(a["planned_hours"]) for a in day_map[d]) for d in days
+        }
+
+        for item in items:
+            hours = float(item.estimated_hours or 0)
+            if hours <= 0:
+                hours = round(max(daily_cap * 0.35, 0.5), 1)
+
+            item_days = days
+            if item.planned_start and item.planned_end:
+                narrowed = [
+                    d for d in days if item.planned_start <= d <= item.planned_end
+                ]
+                if narrowed:
+                    item_days = narrowed
+            ordered = sorted(item_days)
+
+            # Pack into day chunks respecting daily capacity when possible.
+            remaining = hours
+            chunks: list[tuple[date, float]] = []
+            safety = 0
+            while remaining > 1e-6 and safety < 40:
+                safety += 1
+                day = min(ordered, key=lambda d: (loads.get(d, 0.0), d.toordinal()))
+                room = daily_cap - loads.get(day, 0.0)
+                if room >= 0.25:
+                    take = min(remaining, room)
+                else:
+                    # All days are full — still place leftover on least-loaded day.
+                    take = remaining
+                take = round(take, 1)
+                if take <= 0:
+                    take = remaining
+                chunks.append((day, take))
+                loads[day] = loads.get(day, 0.0) + take
+                remaining = round(remaining - take, 1)
+
+            primary_day = chunks[0][0]
+            last_day = chunks[-1][0]
+            if opts.pin_work_item_dates:
+                item.planned_start = primary_day
+                item.planned_end = last_day
+
+            assignee = item.assignee_user_id or default_assignee
+
+            for chunk_index, (day, chunk_hours) in enumerate(chunks):
+                title = (
+                    item.title
+                    if len(chunks) == 1
+                    else f"{item.title}（{day.isoformat()}）"
+                )
+                task_id = None
+                if chunk_index == 0 and item.task_id is not None:
+                    task = db.query(Task).filter(Task.id == item.task_id).one_or_none()
+                    if task is not None:
+                        task.due_date = day
+                        task.title = item.title
+                        task.assignee_user_id = assignee
+                        task_id = task.id
+                        updated_tasks += 1
+                    else:
+                        item.task_id = None
+
+                if task_id is None and opts.create_tasks:
+                    max_order = (
+                        db.query(Task.sort_order)
+                        .filter(Task.project_id == project.id)
+                        .order_by(Task.sort_order.desc())
+                        .first()
+                    )
+                    task = Task(
+                        team_id=team_id,
+                        project_id=project.id,
+                        title=title[:200],
+                        status=item.status
+                        if item.status in PHASE_WORK_ITEM_STATUSES
+                        else "todo",
+                        assignee_user_id=assignee,
+                        due_date=day,
+                        sort_order=(max_order[0] + 1) if max_order else 0,
+                        created_by_user_id=current_user.id,
+                    )
+                    db.add(task)
+                    db.flush()
+                    task_id = task.id
+                    created_tasks += 1
+                    if chunk_index == 0:
+                        item.task_id = task_id
+
+                day_map.setdefault(day, []).append(
+                    {
+                        "work_item_id": item.id,
+                        "task_id": task_id,
+                        "phase_id": phase.id,
+                        "phase_name": phase.name,
+                        "title": title[:200],
+                        "assignee_user_id": assignee,
+                        "planned_hours": chunk_hours,
+                        "status": item.status,
+                    }
+                )
+            assigned += 1
+
+    if opts.mark_confirmed:
+        project.plan_confirmed = True
+    else:
+        # Expanding daily detail usually means plan is still adjustable
+        project.plan_confirmed = False
+
+    notify_team_members(
+        db,
+        team_id=team_id,
+        project_id=project.id,
+        type="cycle_schedule_expanded_daily",
+        category="周期",
+        title="已展开每日工作排期",
+        body=(
+            f"「{project.name}」已把阶段工作项排到具体日期"
+            f"（{assigned} 项 → {created_tasks} 新建 / {updated_tasks} 更新任务）。"
+        ),
+        link_path=f"/teams/{team_id}/projects/{project.id}/daily",
+        exclude_user_id=current_user.id,
+    )
+    db.commit()
+    db.refresh(project)
+
+    days_payload = _build_daily_plan_days(day_map)
+    return DailyPlanResponse(
+        project_id=project.id,
+        team_id=project.team_id,
+        project_name=project.name,
+        planned_start=project.planned_start,
+        planned_end=project.planned_end,
+        member_daily_hours=daily_cap,
+        weekdays_only=opts.weekdays_only,
+        assigned_work_item_count=assigned,
+        created_task_count=created_tasks,
+        updated_task_count=updated_tasks,
+        day_count=len(days_payload),
+        days=days_payload,
+        schedule=_build_schedule_response(db, project),
+    )
+
+
+@router.get("/daily-plan", response_model=DailyPlanResponse)
+def get_daily_plan(
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    weekdays_only: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DailyPlanResponse:
+    """Read-only day-by-day view from work items / linked tasks (after expand)."""
+    require_team_membership(db, team_id=team_id, user=current_user)
+    project = _require_project(db, team_id=team_id, project_id=project_id)
+
+    items = (
+        db.query(PhaseWorkItem, ProjectPhase)
+        .join(ProjectPhase, ProjectPhase.id == PhaseWorkItem.phase_id)
+        .filter(PhaseWorkItem.project_id == project.id)
+        .order_by(
+            ProjectPhase.sort_order.asc(),
+            PhaseWorkItem.sort_order.asc(),
+            PhaseWorkItem.created_at.asc(),
+        )
+        .all()
+    )
+
+    day_map: dict[date, list[dict]] = {}
+    for item, phase in items:
+        # Prefer linked task due_date; else work item start day
+        day = None
+        if item.task_id:
+            task = db.query(Task).filter(Task.id == item.task_id).one_or_none()
+            if task and task.due_date:
+                day = task.due_date
+        if day is None:
+            day = item.planned_start or phase.planned_start or project.planned_start
+        if day is None:
+            continue
+        if weekdays_only and day.weekday() >= 5:
+            # still show if already assigned to weekend
+            pass
+        day_map.setdefault(day, []).append(
+            {
+                "work_item_id": item.id,
+                "task_id": item.task_id,
+                "phase_id": phase.id,
+                "phase_name": phase.name,
+                "title": item.title,
+                "assignee_user_id": item.assignee_user_id,
+                "planned_hours": float(item.estimated_hours or 0),
+                "status": item.status,
+            }
+        )
+
+    days_payload = _build_daily_plan_days(day_map)
+    return DailyPlanResponse(
+        project_id=project.id,
+        team_id=project.team_id,
+        project_name=project.name,
+        planned_start=project.planned_start,
+        planned_end=project.planned_end,
+        member_daily_hours=float(project.member_daily_hours or 6.0),
+        weekdays_only=weekdays_only,
+        assigned_work_item_count=sum(len(v) for v in day_map.values()),
+        created_task_count=0,
+        updated_task_count=0,
+        day_count=len(days_payload),
+        days=days_payload,
+        schedule=None,
+    )
+
+
+def _iter_days(start: date, end: date, *, weekdays_only: bool) -> list[date]:
+    days: list[date] = []
+    cursor = start
+    while cursor <= end:
+        if not weekdays_only or cursor.weekday() < 5:
+            days.append(cursor)
+        cursor += timedelta(days=1)
+    return days
+
+
+def _build_daily_plan_days(day_map: dict[date, list[dict]]) -> list[DailyPlanDay]:
+    result: list[DailyPlanDay] = []
+    for day in sorted(day_map.keys()):
+        assignments = day_map[day]
+        phase_id = assignments[0]["phase_id"] if assignments else None
+        phase_name = assignments[0]["phase_name"] if assignments else None
+        # If multiple phases on same day, leave phase blank-ish using first
+        total = round(sum(float(a["planned_hours"]) for a in assignments), 1)
+        result.append(
+            DailyPlanDay(
+                date=day,
+                phase_id=phase_id,
+                phase_name=phase_name,
+                total_planned_hours=total,
+                assignments=[
+                    DailyPlanAssignment(
+                        work_item_id=a["work_item_id"],
+                        task_id=a["task_id"],
+                        phase_id=a["phase_id"],
+                        phase_name=a["phase_name"],
+                        title=a["title"],
+                        assignee_user_id=a["assignee_user_id"],
+                        planned_hours=float(a["planned_hours"]),
+                        status=a["status"],
+                    )
+                    for a in assignments
+                ],
+            )
+        )
+    return result
 
 
 @router.post("/confirm", response_model=ProjectCycleScheduleResponse)
