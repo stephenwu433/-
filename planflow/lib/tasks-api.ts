@@ -4,7 +4,23 @@
 
 import { apiFetch } from "./api-client";
 
-export type TaskStatus = "todo" | "doing" | "done";
+export type TaskStatus = "todo" | "doing" | "review" | "done" | "returned";
+
+export const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "未开始",
+  doing: "进行中",
+  review: "待验收",
+  done: "已完成",
+  returned: "已退回",
+};
+
+export const TASK_STATUSES: TaskStatus[] = [
+  "todo",
+  "doing",
+  "review",
+  "done",
+  "returned",
+];
 
 export type Task = {
   id: string;

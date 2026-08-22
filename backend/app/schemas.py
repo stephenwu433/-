@@ -46,6 +46,7 @@ class TeamMemberListResponse(BaseModel):
 
 
 JOB_TITLES = (
+    "project_manager",
     "pm",
     "designer",
     "frontend",
@@ -53,7 +54,20 @@ JOB_TITLES = (
     "fullstack",
     "qa",
     "ops",
+    "other",
 )
+
+JOB_TITLE_LABELS_ZH = {
+    "project_manager": "项目经理",
+    "pm": "产品经理",
+    "designer": "设计师",
+    "frontend": "前端工程师",
+    "backend": "后端工程师",
+    "fullstack": "全栈工程师",
+    "qa": "测试工程师",
+    "ops": "运营",
+    "other": "其他",
+}
 
 
 class TeamMemberUpdateRequest(BaseModel):
@@ -180,7 +194,15 @@ class PortfolioResponse(BaseModel):
     projects: list[PortfolioProjectCard]
 
 
-TASK_STATUSES = ("todo", "doing", "done")
+TASK_STATUSES = ("todo", "doing", "review", "done", "returned")
+
+TASK_STATUS_LABELS_ZH = {
+    "todo": "未开始",
+    "doing": "进行中",
+    "review": "待验收",
+    "done": "已完成",
+    "returned": "已退回",
+}
 
 
 class TaskCreateRequest(BaseModel):
@@ -252,7 +274,40 @@ class DailyTasksResponse(BaseModel):
     task_count: int
     total_logged_hours: float
     my_logged_hours: float
+    completion_percent: int = 0
+    day_note: str | None = None
     tasks: list[DailyTaskCard]
+
+
+class DailyDayFeedbackRequest(BaseModel):
+    completion_percent: int = Field(ge=0, le=100)
+    day_note: str | None = Field(default=None, max_length=4000)
+    # When True and completion_percent == 100, mark today's incomplete tasks as review.
+    apply_review_status: bool = True
+
+
+class ProjectMemberResponse(BaseModel):
+    user_id: uuid.UUID
+    clerk_user_id: str
+    email: str | None = None
+    display_name: str | None = None
+    job_title: str | None = None
+    job_title_label: str | None = None
+    joined_at: datetime
+
+
+class ProjectMemberListResponse(BaseModel):
+    members: list[ProjectMemberResponse]
+
+
+class ProjectMemberCreateRequest(BaseModel):
+    user_id: uuid.UUID
+    job_title: str | None = Field(default=None, max_length=40)
+
+
+class ProjectMemberUpdateRequest(BaseModel):
+    job_title: str | None = Field(default=None, max_length=40)
+    clear_job_title: bool = False
 
 
 class MyDailyTaskItem(BaseModel):
@@ -345,9 +400,12 @@ class WorkloadMemberCard(BaseModel):
 
 class WorkloadResponse(BaseModel):
     view_date: date
+    # Kept for backwards compatibility with older clients; for day scope both equal view_date.
     month_start: date
     month_end: date
-    weekday_count: int
+    weekday_count: int = 1
+    scope: str = "day"
+    capacity_hours_default: float = 6.0
     member_count: int
     overloaded_count: int
     members: list[WorkloadMemberCard]
@@ -357,10 +415,10 @@ PHASE_WORK_ITEM_STATUSES = ("todo", "doing", "done")
 
 DEFAULT_PHASE_NAMES = (
     "项目启动与目标确认",
-    "方案与示范高保真",
-    "核心技术与后端",
-    "优化全过程体验",
-    "驻场上线与维护",
+    "方案与资源准备",
+    "核心执行与推进",
+    "优化与交付准备",
+    "验收上线与复盘",
 )
 
 # Full-cycle phases used when generating a plan from written requirements.

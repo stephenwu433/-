@@ -11,12 +11,8 @@ import {
   type DailyReport,
 } from "@/lib/daily-report-api";
 import { listMyTeams } from "@/lib/teams-api";
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "待办",
-  doing: "进行中",
-  done: "已完成",
-};
+import { STATUS_LABELS, type TaskStatus } from "@/lib/tasks-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 function todayIso() {
   const d = new Date();
@@ -115,27 +111,13 @@ export default function ProjectDailyReportPage() {
   }
 
   return (
+    <WorkbenchShell
+      teamId={teamId}
+      projectId={projectId}
+      projectName={report?.project_name}
+    >
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}`}
-          className="underline hover:text-zinc-800"
-        >
-          ← 返回项目
-        </Link>
-        {" · "}
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}/daily`}
-          className="underline hover:text-zinc-800"
-        >
-          每日任务
-        </Link>
-        {" · "}
-        <Link href="/portfolio" className="underline hover:text-zinc-800">
-          项目总览
-        </Link>
-      </p>
-      <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
         Daily Project Report
       </p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
@@ -222,7 +204,7 @@ export default function ProjectDailyReportPage() {
                           </p>
                           <p className="text-xs text-zinc-500">
                             {item.assignee_display_name || "未指派"} ·{" "}
-                            {STATUS_LABELS[item.status] || item.status}
+                            {STATUS_LABELS[item.status as TaskStatus] || item.status}
                             {item.notes.length
                               ? ` · ${item.notes.join("；")}`
                               : ""}
@@ -291,5 +273,6 @@ export default function ProjectDailyReportPage() {
         </div>
       )}
     </main>
+    </WorkbenchShell>
   );
 }

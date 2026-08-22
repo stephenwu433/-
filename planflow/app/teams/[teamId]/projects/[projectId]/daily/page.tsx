@@ -5,20 +5,16 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 import {
   getDailyTasks,
+  saveDailyFeedback,
   upsertTimeEntry,
   type DailyTaskCard,
   type DailyTasksResponse,
 } from "@/lib/daily-tasks-api";
-import { createTask } from "@/lib/tasks-api";
+import { createTask, STATUS_LABELS, type TaskStatus } from "@/lib/tasks-api";
 import { listMyTeams } from "@/lib/teams-api";
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "待办",
-  doing: "进行中",
-  done: "已完成",
-};
 
 function todayIso() {
   const d = new Date();
@@ -47,6 +43,9 @@ export default function DailyTasksPage() {
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
+  const [completionPercent, setCompletionPercent] = useState(0);
+  const [dayNote, setDayNote] = useState("");
+  const [savingFeedback, setSavingFeedback] = useState(false);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -63,6 +62,8 @@ export default function DailyTasksPage() {
     }
     const payload = await getDailyTasks(token, teamId, projectId, viewDate);
     setData(payload);
+    setCompletionPercent(payload.completion_percent ?? 0);
+    setDayNote(payload.day_note ?? "");
   }, [getToken, teamId, projectId, viewDate]);
 
   useEffect(() => {
@@ -128,121 +129,168 @@ export default function DailyTasksPage() {
     }
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}`}
-          className="underline hover:text-zinc-800"
-        >
-          ← 返回项目
-        </Link>
-        {" · "}
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}/report`}
-          className="underline hover:text-zinc-800"
-        >
-          项目日报
-        </Link>
-        {" · "}
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}/schedule`}
-          className="underline hover:text-zinc-800"
-        >
-          周期排期
-        </Link>
-        {" · "}
-        <Link href="/portfolio" className="underline hover:text-zinc-800">
-          项目总览
-        </Link>
-      </p>
-      <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-        Daily Tasks · Current Project
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
-        {data?.project_name || "项目"} · 每日任务
-      </h1>
-      <p className="mt-2 text-sm leading-6 text-zinc-600">
-        查看所选日期的项目任务，并填写当日工时与说明。
-      </p>
+  async function onSaveFeedback(e: FormEvent) {
+    e.preventDefault();
+    setSavingFeedback(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const payload = await saveDailyFeedback(token, teamId, projectId, viewDate, {
+        completion_percent: completionPercent,
+        day_note: dayNote,
+        apply_review_status: true,
+      });
+      setData(payload);
+      setCompletionPercent(payload.completion_percent ?? 0);
+      setDayNote(payload.day_note ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingFeedback(false);
+    }
+  }
 
-      {!isLoaded ? (
-        <p className="mt-8 text-sm text-zinc-500">确认登录…</p>
-      ) : !isSignedIn ? (
-        <p className="mt-8 text-sm text-amber-800">
-          请先{" "}
-          <Link href="/sign-in" className="underline">
-            登录
-          </Link>
-          。
+  return (
+    <WorkbenchShell
+      teamId={teamId}
+      projectId={projectId}
+      projectName={data?.project_name}
+    >
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-10">
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+          Daily Tasks · Current Project
         </p>
-      ) : (
-        <div className="mt-8 space-y-8">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <label className="flex flex-col gap-1 text-xs text-zinc-500">
-              查看日期
-              <input
-                type="date"
-                value={viewDate}
-                onChange={(e) => setViewDate(e.target.value)}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
-              />
-            </label>
-            {data ? (
-              <p className="text-sm text-zinc-600">
-                {formatCnDate(data.view_date)} · 当日已填{" "}
-                <span className="font-semibold text-zinc-900">
-                  {data.my_logged_hours}h
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
+          {data?.project_name || "项目"} · 每日任务
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-zinc-600">
+          查看所选日期的项目任务，填写当日工时，并记录任务总完成度。
+        </p>
+
+        {!isLoaded ? (
+          <p className="mt-8 text-sm text-zinc-500">确认登录…</p>
+        ) : !isSignedIn ? (
+          <p className="mt-8 text-sm text-amber-800">
+            请先{" "}
+            <Link href="/sign-in" className="underline">
+              登录
+            </Link>
+            。
+          </p>
+        ) : (
+          <div className="mt-8 space-y-8">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                查看日期
+                <input
+                  type="date"
+                  value={viewDate}
+                  onChange={(e) => setViewDate(e.target.value)}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              {data ? (
+                <p className="text-sm text-zinc-600">
+                  {formatCnDate(data.view_date)} · 当日已填{" "}
+                  <span className="font-semibold text-zinc-900">
+                    {data.my_logged_hours}h
+                  </span>
+                  （合计 {data.total_logged_hours}h）
+                </p>
+              ) : null}
+            </div>
+
+            <form
+              onSubmit={onSaveFeedback}
+              className="space-y-3 rounded-md border border-zinc-200 p-4"
+            >
+              <h2 className="text-sm font-medium text-zinc-900">任务总完成度</h2>
+              <label className="flex flex-col gap-2 text-xs text-zinc-500">
+                <span className="flex items-center justify-between">
+                  <span>完成度</span>
+                  <span className="tabular-nums text-sm font-medium text-zinc-900">
+                    {completionPercent}%
+                  </span>
                 </span>
-                （合计 {data.total_logged_hours}h）
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={completionPercent}
+                  onChange={(e) => setCompletionPercent(Number(e.target.value))}
+                  className="w-full"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                当日备注
+                <textarea
+                  value={dayNote}
+                  onChange={(e) => setDayNote(e.target.value)}
+                  placeholder="今天整体进展、风险或需要同步的事项"
+                  maxLength={4000}
+                  rows={3}
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500"
+                />
+              </label>
+              <p className="text-xs text-zinc-500">
+                完成度设为 100% 时，未完成任务将标记为「待验收」。
+              </p>
+              <button
+                type="submit"
+                disabled={savingFeedback}
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+              >
+                {savingFeedback ? "保存中…" : "保存反馈"}
+              </button>
+            </form>
+
+            <form onSubmit={onCreateForDay} className="flex flex-col gap-3 sm:flex-row">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder={`为 ${formatCnDate(viewDate)} 添加任务`}
+                maxLength={200}
+                className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+              />
+              <button
+                type="submit"
+                disabled={creating || !newTitle.trim()}
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+              >
+                {creating ? "添加中…" : "添加当日任务"}
+              </button>
+            </form>
+
+            {error ? (
+              <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
               </p>
             ) : null}
+
+            {loading ? (
+              <p className="text-sm text-zinc-500">加载每日任务…</p>
+            ) : !data || data.tasks.length === 0 ? (
+              <p className="rounded-md border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500">
+                这一天还没有任务。可以在上面添加，或在项目任务页给任务设置截止日期。
+              </p>
+            ) : (
+              <ul className="space-y-4">
+                {data.tasks.map((card) => (
+                  <DailyTaskRow
+                    key={card.task.id}
+                    card={card}
+                    saving={savingTaskId === card.task.id}
+                    onSave={onSaveHours}
+                  />
+                ))}
+              </ul>
+            )}
           </div>
-
-          <form onSubmit={onCreateForDay} className="flex flex-col gap-3 sm:flex-row">
-            <input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder={`为 ${formatCnDate(viewDate)} 添加任务`}
-              maxLength={200}
-              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
-            />
-            <button
-              type="submit"
-              disabled={creating || !newTitle.trim()}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-            >
-              {creating ? "添加中…" : "添加当日任务"}
-            </button>
-          </form>
-
-          {error ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              {error}
-            </p>
-          ) : null}
-
-          {loading ? (
-            <p className="text-sm text-zinc-500">加载每日任务…</p>
-          ) : !data || data.tasks.length === 0 ? (
-            <p className="rounded-md border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500">
-              这一天还没有任务。可以在上面添加，或在项目任务页给任务设置截止日期。
-            </p>
-          ) : (
-            <ul className="space-y-4">
-              {data.tasks.map((card) => (
-                <DailyTaskRow
-                  key={card.task.id}
-                  card={card}
-                  saving={savingTaskId === card.task.id}
-                  onSave={onSaveHours}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </main>
+        )}
+      </main>
+    </WorkbenchShell>
   );
 }
 
@@ -263,7 +311,8 @@ function DailyTaskRow({
     setNote(card.my_note ?? "");
   }, [card.my_hours, card.my_note, card.task.id]);
 
-  const status = STATUS_LABELS[card.task.status] || card.task.status;
+  const statusKey = card.task.status as TaskStatus;
+  const status = STATUS_LABELS[statusKey] || card.task.status;
 
   return (
     <li className="rounded-md border border-zinc-200 p-4">

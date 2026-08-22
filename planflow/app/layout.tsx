@@ -2,7 +2,6 @@ import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import { NotificationsNavLink } from "@/components/NotificationsNavLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,10 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
-          <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
+          <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3">
             <Link
-              href="/"
-              className="text-lg font-semibold tracking-tight text-zinc-900"
+              href="/portfolio"
+              className="text-base font-semibold tracking-tight text-zinc-900"
             >
               PlanFlow
             </Link>
@@ -39,34 +38,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Show when="signed-in">
                 <Link
                   href="/my-day"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                  className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
                 >
                   我的今日
                 </Link>
                 <Link
-                  href="/team-day"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
-                >
-                  团队今日
-                </Link>
-                <Link
-                  href="/portfolio"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
-                >
-                  项目总览
-                </Link>
-                <Link
-                  href="/workload"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
-                >
-                  跨项目负荷
-                </Link>
-                <NotificationsNavLink />
-                <Link
                   href="/teams"
-                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                  className="rounded-md px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100"
                 >
-                  我的团队
+                  团队
                 </Link>
                 <UserButton />
               </Show>

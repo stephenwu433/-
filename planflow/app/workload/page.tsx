@@ -9,6 +9,7 @@ import {
   type WorkloadMember,
   type WorkloadResponse,
 } from "@/lib/workload-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 function todayIso() {
   const d = new Date();
@@ -18,10 +19,10 @@ function todayIso() {
   return `${y}-${m}-${day}`;
 }
 
-function monthLabel(iso: string) {
-  const [y, m] = iso.split("-");
-  if (!y || !m) return iso;
-  return `${y}年${Number(m)}月`;
+function formatCnDate(iso: string) {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${y}年${Number(m)}月${Number(d)}日`;
 }
 
 function initials(name: string) {
@@ -36,20 +37,17 @@ export default function WorkloadPage() {
   const { isLoaded, isSignedIn } = useAuth();
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link href="/portfolio" className="underline hover:text-zinc-800">
-          ← 项目总览
-        </Link>
-      </p>
-      <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+    <WorkbenchShell>
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
         Cross-Project Capacity
       </p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
         跨项目成员工作量
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        按月汇总你所在团队里各成员的未完成到期任务与已填工时，用来发现多项目资源冲突。
+        按日汇总你所在团队里各成员的未完成到期任务与已填工时；超过当日容量（约
+        6h）视为超负荷。
       </p>
 
       {!isLoaded ? (
@@ -66,6 +64,7 @@ export default function WorkloadPage() {
         <WorkloadPanel />
       )}
     </main>
+    </WorkbenchShell>
   );
 }
 
@@ -112,7 +111,7 @@ function WorkloadPanel() {
     <div className="mt-8 space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="flex flex-col gap-1 text-xs text-zinc-500">
-          查看月份（任选月内一天）
+          查看日期
           <input
             type="date"
             value={viewDate}
@@ -122,8 +121,9 @@ function WorkloadPanel() {
         </label>
         {data ? (
           <p className="text-sm text-zinc-600">
-            {monthLabel(data.month_start)} · {data.member_count} 人有任务/工时 ·
-            偏高 {data.overloaded_count} 人 · 工作日 {data.weekday_count} 天
+            {formatCnDate(data.view_date)}
+            {data.scope === "day" ? " · 按日" : ""} · {data.member_count}{" "}
+            人有任务/工时 · 超负荷 {data.overloaded_count} 人
           </p>
         ) : null}
       </div>
@@ -139,10 +139,10 @@ function WorkloadPanel() {
       ) : !data || data.members.length === 0 ? (
         <section className="rounded-md border border-dashed border-zinc-300 px-6 py-10 text-center">
           <p className="text-sm font-medium text-zinc-900">
-            这个月还没有跨项目任务或工时
+            这一天还没有跨项目任务或工时
           </p>
           <p className="mt-2 text-sm text-zinc-600">
-            给任务设置负责人与截止日期，或在每日任务里填工时后，这里会汇总成员负荷。
+            给任务设置负责人与截止日期，或在每日任务里填工时后，这里会汇总当日成员负荷。
           </p>
           <Link
             href="/portfolio"
@@ -184,17 +184,17 @@ function MemberCard({ member }: { member: WorkloadMember }) {
           <p className="text-2xl font-semibold tabular-nums text-zinc-900">
             {member.load_ratio.toFixed(1)}x
           </p>
-          <p className="text-xs text-zinc-500">相对月容量</p>
+          <p className="text-xs text-zinc-500">相对日容量</p>
         </div>
       </div>
 
       {member.overloaded ? (
         <p className="mt-3 text-sm text-red-700">
-          每天约 {member.projects_per_day} 项到期任务，可能超负荷
+          已填 {member.logged_hours}h，超过当日容量约 {member.capacity_hours}h
         </p>
       ) : (
         <p className="mt-3 text-sm text-zinc-600">
-          已填 {member.logged_hours}h / 月容量约 {member.capacity_hours}h
+          已填 {member.logged_hours}h / 日容量约 {member.capacity_hours}h
         </p>
       )}
 

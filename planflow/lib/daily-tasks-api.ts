@@ -22,6 +22,8 @@ export type DailyTasksResponse = {
   task_count: number;
   total_logged_hours: number;
   my_logged_hours: number;
+  completion_percent: number;
+  day_note: string | null;
   tasks: DailyTaskCard[];
 };
 
@@ -52,6 +54,32 @@ export function getDailyTasks(
   return apiFetch<DailyTasksResponse>(
     `${base(teamId, projectId)}/daily-tasks${qs}`,
     token,
+  );
+}
+
+export function saveDailyFeedback(
+  token: string,
+  teamId: string,
+  projectId: string,
+  viewDate: string,
+  body: {
+    completion_percent: number;
+    day_note?: string | null;
+    apply_review_status?: boolean;
+  },
+) {
+  const qs = `?view_date=${encodeURIComponent(viewDate)}`;
+  return apiFetch<DailyTasksResponse>(
+    `${base(teamId, projectId)}/daily-tasks/feedback${qs}`,
+    token,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        completion_percent: body.completion_percent,
+        day_note: body.day_note?.trim() ? body.day_note.trim() : null,
+        apply_review_status: body.apply_review_status ?? true,
+      }),
+    },
   );
 }
 

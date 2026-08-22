@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
-from app.models import Project, Task, TaskTimeEntry, User
+from app.models import Project, ProjectDailyReport, Task, TaskTimeEntry, User
 from app.schemas import (
+    DailyDayFeedbackRequest,
     DailyTaskCard,
     DailyTasksResponse,
     TaskResponse,
@@ -150,6 +151,15 @@ def list_daily_tasks(
             )
         )
 
+    report = (
+        db.query(ProjectDailyReport)
+        .filter(
+            ProjectDailyReport.project_id == project_id,
+            ProjectDailyReport.report_date == day,
+        )
+        .one_or_none()
+    )
+
     return DailyTasksResponse(
         view_date=day,
         project_id=project.id,
@@ -158,7 +168,72 @@ def list_daily_tasks(
         task_count=len(cards),
         total_logged_hours=round(day_total, 1),
         my_logged_hours=round(my_total, 1),
+        completion_percent=int(report.completion_percent) if report else 0,
+        day_note=report.day_note if report else None,
         tasks=cards,
+    )
+
+
+@router.put("/daily-tasks/feedback", response_model=DailyTasksResponse)
+def save_daily_feedback(
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    body: DailyDayFeedbackRequest,
+    view_date: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DailyTasksResponse:
+    """Save day completion % / note (reference: 任务总完成度滑条)."""
+    require_team_membership(db, team_id=team_id, user=current_user)
+    project = _require_project(db, team_id=team_id, project_id=project_id)
+    day = view_date or date.today()
+
+    note = body.day_note.strip() if body.day_note else None
+    if note == "":
+        note = None
+
+    report = (
+        db.query(ProjectDailyReport)
+        .filter(
+            ProjectDailyReport.project_id == project_id,
+            ProjectDailyReport.report_date == day,
+        )
+        .one_or_none()
+    )
+    if report is None:
+        report = ProjectDailyReport(
+            team_id=team_id,
+            project_id=project_id,
+            report_date=day,
+            completion_percent=body.completion_percent,
+            day_note=note,
+            created_by_user_id=current_user.id,
+        )
+        db.add(report)
+    else:
+        report.completion_percent = body.completion_percent
+        report.day_note = note
+
+    if body.apply_review_status and body.completion_percent >= 100:
+        day_tasks = (
+            db.query(Task)
+            .filter(
+                Task.project_id == project_id,
+                Task.due_date == day,
+                Task.status.in_(("todo", "doing", "returned")),
+            )
+            .all()
+        )
+        for task in day_tasks:
+            task.status = "review"
+
+    db.commit()
+    return list_daily_tasks(
+        team_id=team_id,
+        project_id=project_id,
+        view_date=day,
+        db=db,
+        current_user=current_user,
     )
 
 

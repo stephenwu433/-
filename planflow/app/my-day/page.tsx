@@ -10,13 +10,12 @@ import {
   type MyDailyTaskItem,
   type MyDailyTasksResponse,
 } from "@/lib/my-daily-api";
-import { updateTask } from "@/lib/tasks-api";
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "待办",
-  doing: "进行中",
-  done: "已完成",
-};
+import {
+  updateTask,
+  STATUS_LABELS,
+  TASK_STATUSES,
+  type TaskStatus,
+} from "@/lib/tasks-api";
 
 function todayIso() {
   const d = new Date();
@@ -179,7 +178,7 @@ export default function MyDailyPage() {
                 <Summary label="日期" value={formatCnDate(data.view_date)} />
                 <Summary label="任务数" value={String(data.task_count)} />
                 <Summary
-                  label="待办 / 进行中"
+                  label="未开始 / 进行中"
                   value={`${data.todo_count} / ${data.doing_count}`}
                 />
                 <Summary label="我已填工时" value={`${data.my_logged_hours}h`} />
@@ -243,8 +242,9 @@ function TaskCard({
 }) {
   const [hours, setHours] = useState(String(item.my_hours || ""));
   const [note, setNote] = useState(item.my_note || "");
-  const status =
-    item.status === "doing" || item.status === "done" ? item.status : "todo";
+  const status = (TASK_STATUSES as string[]).includes(item.status)
+    ? (item.status as TaskStatus)
+    : "todo";
 
   useEffect(() => {
     setHours(String(item.my_hours || ""));
@@ -278,9 +278,11 @@ function TaskCard({
             onChange={(e) => onStatus(e.target.value)}
             className="ml-2 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
           >
-            <option value="todo">{STATUS_LABELS.todo}</option>
-            <option value="doing">{STATUS_LABELS.doing}</option>
-            <option value="done">{STATUS_LABELS.done}</option>
+            {TASK_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
           </select>
         </label>
       </div>

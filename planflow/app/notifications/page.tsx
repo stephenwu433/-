@@ -10,6 +10,7 @@ import {
   markNotificationRead,
   type AppNotification,
 } from "@/lib/notifications-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 function formatWhen(iso: string) {
   try {
@@ -98,13 +99,9 @@ export default function NotificationsPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link href="/portfolio" className="underline hover:text-zinc-800">
-          ← 项目总览
-        </Link>
-      </p>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+    <WorkbenchShell>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             站内提醒
@@ -208,5 +205,6 @@ export default function NotificationsPage() {
         </div>
       )}
     </main>
+    </WorkbenchShell>
   );
 }
