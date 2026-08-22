@@ -15,6 +15,7 @@ from app.routers import (
     notifications,
     projects,
     tasks,
+    team_daily,
     teams,
     workload,
 )
@@ -23,7 +24,7 @@ from app.schemas import MeResponse
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
-    version="0.12.0",
+    version="0.13.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
@@ -47,6 +48,7 @@ app.include_router(daily_tasks.router)
 app.include_router(daily_report.router)
 app.include_router(workload.router)
 app.include_router(my_daily.router)
+app.include_router(team_daily.router)
 app.include_router(notifications.router)
 app.include_router(notifications.project_router)
 

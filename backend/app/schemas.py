@@ -280,6 +280,46 @@ class MyDailyTasksResponse(BaseModel):
     tasks: list[MyDailyTaskItem] = Field(default_factory=list)
 
 
+class TeamDailyTaskItem(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    status: str
+    due_date: date | None = None
+    project_id: uuid.UUID
+    project_name: str
+    phase_name: str | None = None
+    assignee_hours: float = 0.0
+    assignee_note: str | None = None
+
+
+class TeamDailyMemberColumn(BaseModel):
+    user_id: uuid.UUID
+    display_name: str
+    job_title: str | None = None
+    job_title_label: str | None = None
+    task_count: int = 0
+    todo_count: int = 0
+    doing_count: int = 0
+    done_count: int = 0
+    logged_hours: float = 0.0
+    tasks: list[TeamDailyTaskItem] = Field(default_factory=list)
+
+
+class TeamDailyBoardResponse(BaseModel):
+    view_date: date
+    team_id: uuid.UUID
+    team_name: str
+    project_id: uuid.UUID | None = None
+    member_count: int = 0
+    task_count: int = 0
+    todo_count: int = 0
+    doing_count: int = 0
+    done_count: int = 0
+    logged_hours: float = 0.0
+    members: list[TeamDailyMemberColumn] = Field(default_factory=list)
+    unassigned_tasks: list[TeamDailyTaskItem] = Field(default_factory=list)
+
+
 class WorkloadProjectSlice(BaseModel):
     project_id: uuid.UUID
     team_id: uuid.UUID
