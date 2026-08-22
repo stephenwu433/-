@@ -28,6 +28,7 @@ import { listMembers, updateMemberJobTitle, JOB_TITLE_LABELS, type JobTitle, typ
 import { listTeamProjects } from "@/lib/projects-api";
 import { listTasks, type Task } from "@/lib/tasks-api";
 import { listMyTeams } from "@/lib/teams-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 const STATUS_LABELS: Record<WorkItemStatus, string> = {
   todo: "未开始",
@@ -411,34 +412,13 @@ export default function ProjectCycleSchedulePage() {
   const empty = !loading && schedule && schedule.phase_count === 0;
 
   return (
+    <WorkbenchShell
+      teamId={teamId}
+      projectId={projectId}
+      projectName={schedule?.project_name}
+    >
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}`}
-          className="underline hover:text-zinc-800"
-        >
-          ← 返回项目设置
-        </Link>
-        {" · "}
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}/daily`}
-          className="underline hover:text-zinc-800"
-        >
-          每日任务
-        </Link>
-        {" · "}
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}/report`}
-          className="underline hover:text-zinc-800"
-        >
-          项目日报
-        </Link>
-        {" · "}
-        <Link href="/portfolio" className="underline hover:text-zinc-800">
-          项目总览
-        </Link>
-      </p>
-      <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
         Project Master Plan
       </p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
@@ -940,6 +920,7 @@ export default function ProjectCycleSchedulePage() {
         </div>
       )}
     </main>
+    </WorkbenchShell>
   );
 }
 

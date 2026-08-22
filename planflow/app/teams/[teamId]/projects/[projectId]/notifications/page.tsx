@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications-api";
 import { listTeamProjects } from "@/lib/projects-api";
 import { listMyTeams } from "@/lib/teams-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 function formatWhen(iso: string) {
   try {
@@ -113,20 +114,13 @@ export default function ProjectNotificationsPage() {
   }
 
   return (
+    <WorkbenchShell
+      teamId={teamId}
+      projectId={projectId}
+      projectName={projectName}
+    >
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link
-          href={`/teams/${teamId}/projects/${projectId}`}
-          className="underline hover:text-zinc-800"
-        >
-          ← 返回项目
-        </Link>
-        {" · "}
-        <Link href="/notifications" className="underline hover:text-zinc-800">
-          全部提醒
-        </Link>
-      </p>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             {projectName} · 站内提醒
@@ -221,5 +215,6 @@ export default function ProjectNotificationsPage() {
         </div>
       )}
     </main>
+    </WorkbenchShell>
   );
 }

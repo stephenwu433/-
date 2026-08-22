@@ -1,5 +1,5 @@
 /**
- * Cross-project member workload API.
+ * Cross-project member workload API (day scope).
  */
 
 import { apiFetch } from "./api-client";
@@ -29,9 +29,13 @@ export type WorkloadMember = {
 
 export type WorkloadResponse = {
   view_date: string;
+  /** @deprecated day scope: equals view_date */
   month_start: string;
+  /** @deprecated day scope: equals view_date */
   month_end: string;
   weekday_count: number;
+  scope: "day" | string;
+  capacity_hours_default?: number;
   member_count: number;
   overloaded_count: number;
   members: WorkloadMember[];

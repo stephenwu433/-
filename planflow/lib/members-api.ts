@@ -6,22 +6,26 @@ import { apiFetch } from "./api-client";
 import type { Project } from "./projects-api";
 
 export type JobTitle =
+  | "project_manager"
   | "pm"
   | "designer"
   | "frontend"
   | "backend"
   | "fullstack"
   | "qa"
-  | "ops";
+  | "ops"
+  | "other";
 
 export const JOB_TITLE_LABELS: Record<JobTitle, string> = {
-  pm: "产品/项目",
-  designer: "设计",
-  frontend: "前端",
-  backend: "后端",
-  fullstack: "全栈",
-  qa: "测试",
-  ops: "运维/交付",
+  project_manager: "项目经理",
+  pm: "产品经理",
+  designer: "设计师",
+  frontend: "前端工程师",
+  backend: "后端工程师",
+  fullstack: "全栈工程师",
+  qa: "测试工程师",
+  ops: "运营",
+  other: "其他",
 };
 
 export type TeamMember = {

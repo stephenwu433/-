@@ -10,6 +10,7 @@ import {
   type PortfolioResponse,
   type ProjectStatus,
 } from "@/lib/projects-api";
+import { WorkbenchShell } from "@/components/WorkbenchShell";
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   active: "进行中",
@@ -29,13 +30,9 @@ export default function PortfolioPage() {
   const { isLoaded, isSignedIn } = useAuth();
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
-      <p className="text-sm text-zinc-500">
-        <Link href="/" className="underline hover:text-zinc-800">
-          ← 返回首页
-        </Link>
-      </p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
+    <WorkbenchShell>
+      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
+      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
         项目总览
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
@@ -56,6 +53,7 @@ export default function PortfolioPage() {
         <PortfolioPanel />
       )}
     </main>
+    </WorkbenchShell>
   );
 }
 

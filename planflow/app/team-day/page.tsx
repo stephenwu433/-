@@ -12,12 +12,7 @@ import {
   type TeamDailyTaskItem,
 } from "@/lib/team-daily-api";
 import { listMyTeams, type Team } from "@/lib/teams-api";
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "待办",
-  doing: "进行中",
-  done: "已完成",
-};
+import { STATUS_LABELS, type TaskStatus } from "@/lib/tasks-api";
 
 function todayIso() {
   const d = new Date();
@@ -34,8 +29,7 @@ function formatCnDate(iso: string) {
 }
 
 function statusLabel(status: string) {
-  const key = status === "doing" || status === "done" ? status : "todo";
-  return STATUS_LABELS[key];
+  return STATUS_LABELS[status as TaskStatus] || status;
 }
 
 export default function TeamDayPage() {
@@ -233,7 +227,7 @@ export default function TeamDayPage() {
                 <Summary label="日期" value={formatCnDate(data.view_date)} />
                 <Summary label="成员" value={String(data.member_count)} />
                 <Summary
-                  label="任务（待办/进行中）"
+                  label="任务（未开始/进行中）"
                   value={`${data.task_count}（${data.todo_count}/${data.doing_count}）`}
                 />
                 <Summary label="已填工时" value={`${data.logged_hours}h`} />
@@ -283,7 +277,8 @@ function MemberBlock({
           </p>
         </div>
         <p className="text-xs text-zinc-500">
-          待办 {member.todo_count} / 进行中 {member.doing_count} / 完成 {member.done_count}
+          未开始 {member.todo_count} / 进行中 {member.doing_count} / 完成{" "}
+          {member.done_count}
         </p>
       </div>
       {member.tasks.length === 0 ? (
