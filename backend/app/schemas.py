@@ -255,6 +255,31 @@ class DailyTasksResponse(BaseModel):
     tasks: list[DailyTaskCard]
 
 
+class MyDailyTaskItem(BaseModel):
+    task_id: uuid.UUID
+    title: str
+    status: str
+    due_date: date | None = None
+    team_id: uuid.UUID
+    team_name: str
+    project_id: uuid.UUID
+    project_name: str
+    phase_name: str | None = None
+    my_hours: float = 0.0
+    my_note: str | None = None
+    my_entry_id: uuid.UUID | None = None
+
+
+class MyDailyTasksResponse(BaseModel):
+    view_date: date
+    task_count: int = 0
+    todo_count: int = 0
+    doing_count: int = 0
+    done_count: int = 0
+    my_logged_hours: float = 0.0
+    tasks: list[MyDailyTaskItem] = Field(default_factory=list)
+
+
 class WorkloadProjectSlice(BaseModel):
     project_id: uuid.UUID
     team_id: uuid.UUID
