@@ -39,8 +39,10 @@ def mint_token(sub: str, email: str) -> str:
 
 
 def main() -> int:
+    # Fresh identity each run so leftover DB rows from prior smokes don't fail the empty check.
+    stamp = int(time.time())
     headers = {
-        "Authorization": f"Bearer {mint_token('user_dev_myday', 'myday@example.com')}"
+        "Authorization": f"Bearer {mint_token(f'user_dev_myday_{stamp}', f'myday_{stamp}@example.com')}"
     }
     today = date.today()
     end = today + timedelta(days=7)
@@ -53,7 +55,7 @@ def main() -> int:
         team = client.post(
             "/teams",
             headers=headers,
-            json={"name": f"MyDay Team {int(time.time())}"},
+            json={"name": f"MyDay Team {stamp}"},
         )
         team.raise_for_status()
         team_id = team.json()["id"]
@@ -62,7 +64,7 @@ def main() -> int:
             f"/teams/{team_id}/projects",
             headers=headers,
             json={
-                "name": f"MyDay Project {int(time.time())}",
+                "name": f"MyDay Project {stamp}",
                 "planned_start": today.isoformat(),
                 "planned_end": end.isoformat(),
                 "owner_user_id": user_id,
