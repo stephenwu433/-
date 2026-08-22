@@ -40,8 +40,14 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link
-                href="/portfolio"
+                href="/my-day"
                 className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
+              >
+                我的今日任务
+              </Link>
+              <Link
+                href="/portfolio"
+                className="rounded-md border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
               >
                 打开项目总览
               </Link>

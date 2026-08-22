@@ -385,15 +385,16 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
         label = JOB_TITLE_LABELS_ZH.get(eng[0], eng[0])
         steps.append(("开发实现", f"{label}实现", eng[0]))
     elif len(eng) > 1:
-        # One shared phase; per-role work items
         for j in eng:
             label = JOB_TITLE_LABELS_ZH.get(j, j)
             steps.append(("开发实现", f"{label}实现", j))
     elif job_set:
-        # No eng titles — still need to push requirements forward with whoever is there
         owner_job = pick("ops", "pm", "qa", "designer")
         label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
         steps.append(("推进落地", f"{label}推进", owner_job))
+    else:
+        # No job titles configured — keep a generic execution step for goals
+        steps.append(("推进落地", "推进落地", None))
 
     # 4) QA — only if qa exists
     if "qa" in job_set:
