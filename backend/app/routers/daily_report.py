@@ -14,6 +14,7 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import Project, ProjectDailyReport, Task, TaskTimeEntry, User
+from app.notifications import notify_team_members
 from app.schemas import (
     DailyReportResponse,
     DailyReportSaveRequest,
@@ -214,5 +215,15 @@ def save_daily_report(
         row.summary_text = summary
         row.next_actions = actions
 
+    notify_team_members(
+        db,
+        team_id=team_id,
+        project_id=project.id,
+        type="daily_report_saved",
+        category="日报",
+        title="日报已生成",
+        body=f"「{project.name}」{day.month}月{day.day}日项目日报已保存。",
+        link_path=f"/teams/{team_id}/projects/{project.id}/report?view_date={day.isoformat()}",
+    )
     db.commit()
     return _build_report(db, project=project, day=day)
