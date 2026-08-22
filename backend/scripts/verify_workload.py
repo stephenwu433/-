@@ -116,6 +116,13 @@ def main() -> int:
         if float(card["logged_hours"]) < 8:
             print("ERROR: expected logged hours from both projects", file=sys.stderr)
             return 1
+        # Day scope: 8h logged with 6h capacity → overloaded
+        if not card.get("overloaded"):
+            print("ERROR: expected overloaded for 8h > 6h capacity", card, file=sys.stderr)
+            return 1
+        if payload.get("scope") and payload["scope"] != "day":
+            print("ERROR: expected day scope", payload, file=sys.stderr)
+            return 1
 
         unauth = client.get("/workload")
         if unauth.status_code != 401:

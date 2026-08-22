@@ -11,6 +11,7 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import Notification, Project, Task, TeamMember, User
+from app.project_members import require_project_assignee
 from app.schemas import (
     TASK_STATUSES,
     TaskCreateRequest,
@@ -77,17 +78,16 @@ def _get_task(
     return task
 
 
-def _validate_assignee(db: Session, *, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    member = (
-        db.query(TeamMember)
-        .filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
-        .one_or_none()
+def _validate_assignee(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> None:
+    require_project_assignee(
+        db, team_id=team_id, project_id=project_id, user_id=user_id
     )
-    if member is None:
-        raise HTTPException(
-            status_code=400,
-            detail="assignee_user_id must be a member of this team",
-        )
 
 
 @router.get("", response_model=TaskListResponse)
@@ -128,7 +128,12 @@ def create_task(
         description = None
 
     if body.assignee_user_id is not None:
-        _validate_assignee(db, team_id=team_id, user_id=body.assignee_user_id)
+        _validate_assignee(
+            db,
+            team_id=team_id,
+            project_id=project_id,
+            user_id=body.assignee_user_id,
+        )
 
     max_order = (
         db.query(Task.sort_order)
@@ -209,7 +214,12 @@ def update_task(
     if body.clear_assignee:
         task.assignee_user_id = None
     elif body.assignee_user_id is not None:
-        _validate_assignee(db, team_id=team_id, user_id=body.assignee_user_id)
+        _validate_assignee(
+            db,
+            team_id=team_id,
+            project_id=project_id,
+            user_id=body.assignee_user_id,
+        )
         previous = task.assignee_user_id
         task.assignee_user_id = body.assignee_user_id
         if (

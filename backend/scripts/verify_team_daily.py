@@ -96,6 +96,12 @@ def main() -> int:
         project.raise_for_status()
         project_id = project.json()["id"]
 
+        client.post(
+            f"/teams/{team_id}/projects/{project_id}/members",
+            headers=owner,
+            json={"user_id": member_id, "job_title": "frontend"},
+        ).raise_for_status()
+
         empty = client.get(
             f"/teams/{team_id}/team-daily",
             headers=owner,

@@ -152,6 +152,30 @@ class Project(Base):
     )
 
 
+class ProjectMember(Base):
+    """Members scoped to a project (reference MVP: 此项目的成员 + 岗位)."""
+
+    __tablename__ = "project_members"
+    __table_args__ = (UniqueConstraint("project_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    team_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), nullable=False
+    )
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    job_title: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class ProjectPhase(Base):
     __tablename__ = "project_phases"
 
@@ -308,6 +332,8 @@ class ProjectDailyReport(Base):
     report_date: Mapped[date] = mapped_column(Date, nullable=False)
     summary_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     next_actions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    day_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

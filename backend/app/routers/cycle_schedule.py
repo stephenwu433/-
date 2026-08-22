@@ -59,17 +59,18 @@ def _validate_dates(start: date | None, end: date | None) -> None:
         )
 
 
-def _validate_assignee(db: Session, *, team_id: uuid.UUID, user_id: uuid.UUID) -> None:
-    exists = (
-        db.query(TeamMember.id)
-        .filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
-        .first()
+def _validate_assignee(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> None:
+    from app.project_members import require_project_assignee
+
+    require_project_assignee(
+        db, team_id=team_id, project_id=project_id, user_id=user_id
     )
-    if exists is None:
-        raise HTTPException(
-            status_code=400,
-            detail="assignee_user_id must be a member of this team",
-        )
 
 
 def _get_phase(
@@ -332,13 +333,15 @@ def _add_work_item(
 
 
 JOB_TITLE_LABELS_ZH = {
-    "pm": "产品",
-    "designer": "设计",
-    "frontend": "前端",
-    "backend": "后端",
-    "fullstack": "全栈",
-    "qa": "测试",
-    "ops": "运维",
+    "project_manager": "项目经理",
+    "pm": "产品经理",
+    "designer": "设计师",
+    "frontend": "前端工程师",
+    "backend": "后端工程师",
+    "fullstack": "全栈工程师",
+    "qa": "测试工程师",
+    "ops": "运营",
+    "other": "其他",
 }
 
 
@@ -358,6 +361,16 @@ def _team_job_titles(db: Session, *, team_id: uuid.UUID) -> list[str]:
     return seen
 
 
+def _project_job_titles(
+    db: Session, *, team_id: uuid.UUID, project_id: uuid.UUID
+) -> list[str]:
+    """Prefer project-member jobs; fall back to team jobs."""
+    from app.project_members import list_project_job_titles
+
+    jobs = list_project_job_titles(db, project_id=project_id)
+    return jobs or _team_job_titles(db, team_id=team_id)
+
+
 def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None]]:
     """Build (phase_name, title_prefix, target_job) from jobs that actually exist.
 
@@ -372,8 +385,23 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
                 return c
         return jobs[0] if jobs else None
 
-    # 1) Goals / requirements — prefer pm
-    steps.append(("目标与需求", "澄清目标", pick("pm", "fullstack", "frontend", "backend", "ops", "qa", "designer")))
+    # 1) Goals / requirements — prefer pm / project_manager
+    steps.append(
+        (
+            "目标与需求",
+            "澄清目标",
+            pick(
+                "pm",
+                "project_manager",
+                "fullstack",
+                "frontend",
+                "backend",
+                "ops",
+                "qa",
+                "designer",
+            ),
+        )
+    )
 
     # 2) Design — only if designer exists
     if "designer" in job_set:
@@ -582,7 +610,9 @@ def generate_cycle_schedule(
             cleaned = opts.requirements_text.strip()
             if cleaned:
                 project.objective = cleaned[:4000]
-        available_jobs = _team_job_titles(db, team_id=team_id)
+        available_jobs = _project_job_titles(
+            db, team_id=team_id, project_id=project.id
+        )
 
     existing = (
         db.query(ProjectPhase.id)
@@ -819,7 +849,9 @@ def create_work_item(
 
     assignee = body.assignee_user_id
     if assignee is not None:
-        _validate_assignee(db, team_id=team_id, user_id=assignee)
+        _validate_assignee(
+            db, team_id=team_id, project_id=project_id, user_id=assignee
+        )
 
     task_id = body.task_id
     if task_id is not None:
@@ -885,7 +917,12 @@ def update_work_item(
     if body.clear_assignee:
         item.assignee_user_id = None
     elif body.assignee_user_id is not None:
-        _validate_assignee(db, team_id=team_id, user_id=body.assignee_user_id)
+        _validate_assignee(
+            db,
+            team_id=team_id,
+            project_id=project_id,
+            user_id=body.assignee_user_id,
+        )
         item.assignee_user_id = body.assignee_user_id
 
     if body.clear_dates:

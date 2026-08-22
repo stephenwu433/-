@@ -13,6 +13,7 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import Project, Task, Team, TeamMember, User
+from app.project_members import ensure_project_member
 from app.schemas import (
     PROJECT_STATUSES,
     PortfolioProjectCard,
@@ -127,6 +128,21 @@ def create_project(
         created_by_user_id=current_user.id,
     )
     db.add(project)
+    db.flush()
+    # Seed project roster: creator + owner (reference: 此项目的成员)
+    ensure_project_member(
+        db,
+        team_id=team_id,
+        project_id=project.id,
+        user_id=current_user.id,
+    )
+    if owner_id != current_user.id:
+        ensure_project_member(
+            db,
+            team_id=team_id,
+            project_id=project.id,
+            user_id=owner_id,
+        )
     db.commit()
     db.refresh(project)
     return _to_response(project)
