@@ -11,13 +11,16 @@ import {
   createWorkItem,
   deletePhase,
   deleteWorkItem,
+  expandCycleScheduleToDaily,
   generateCycleSchedule,
   getCycleSchedule,
+  getDailyPlan,
   importTasksIntoSchedule,
   syncWorkItemToTask,
   updatePhase,
   updateWorkItem,
   type CycleSchedule,
+  type DailyPlan,
   type SeedMode,
   type WorkItemStatus,
 } from "@/lib/cycle-schedule-api";
@@ -39,6 +42,7 @@ export default function ProjectCycleSchedulePage() {
   const projectId = typeof params.projectId === "string" ? params.projectId : "";
 
   const [schedule, setSchedule] = useState<CycleSchedule | null>(null);
+  const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +52,7 @@ export default function ProjectCycleSchedulePage() {
   const [seedMode, setSeedMode] = useState<SeedMode>("from_requirements");
   const [requirementsText, setRequirementsText] = useState("");
   const [createTasks, setCreateTasks] = useState(true);
+  const [weekdaysOnly, setWeekdaysOnly] = useState(true);
   const [newPhaseName, setNewPhaseName] = useState("");
   const [importPhaseId, setImportPhaseId] = useState("");
   const [newItemTitleByPhase, setNewItemTitleByPhase] = useState<Record<string, string>>(
@@ -67,15 +72,18 @@ export default function ProjectCycleSchedulePage() {
       setSchedule(null);
       return;
     }
-    const [payload, membersPayload, tasksPayload, projectsPayload] = await Promise.all([
-      getCycleSchedule(token, teamId, projectId),
-      listMembers(token, teamId),
-      listTasks(token, teamId, projectId),
-      listTeamProjects(token, teamId),
-    ]);
+    const [payload, membersPayload, tasksPayload, projectsPayload, planPayload] =
+      await Promise.all([
+        getCycleSchedule(token, teamId, projectId),
+        listMembers(token, teamId),
+        listTasks(token, teamId, projectId),
+        listTeamProjects(token, teamId),
+        getDailyPlan(token, teamId, projectId).catch(() => null),
+      ]);
     setSchedule(payload);
     setMembers(membersPayload.members);
     setTasks(tasksPayload.tasks);
+    setDailyPlan(planPayload);
     setImportPhaseId((prev) => prev || payload.phases[0]?.id || "");
     const project = projectsPayload.projects.find((p) => p.id === projectId);
     if (project?.objective) {
@@ -137,6 +145,43 @@ export default function ProjectCycleSchedulePage() {
       setSchedule(payload);
       setSeedMode(mode);
       if (payload.phases[0]) setImportPhaseId(payload.phases[0].id);
+      const tasksPayload = await listTasks(token, teamId, projectId);
+      setTasks(tasksPayload.tasks);
+      // After generating from requirements, auto-expand into daily plan.
+      if (mode === "from_requirements") {
+        const plan = await expandCycleScheduleToDaily(token, teamId, projectId, {
+          weekdays_only: weekdaysOnly,
+          create_tasks: createTasks,
+          pin_work_item_dates: true,
+        });
+        setDailyPlan(plan);
+        if (plan.schedule) setSchedule(plan.schedule);
+        const tasksAfter = await listTasks(token, teamId, projectId);
+        setTasks(tasksAfter.tasks);
+      } else {
+        const plan = await getDailyPlan(token, teamId, projectId).catch(() => null);
+        setDailyPlan(plan);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onExpandDaily() {
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const plan = await expandCycleScheduleToDaily(token, teamId, projectId, {
+        weekdays_only: weekdaysOnly,
+        create_tasks: true,
+        pin_work_item_dates: true,
+      });
+      setDailyPlan(plan);
+      if (plan.schedule) setSchedule(plan.schedule);
       const tasksPayload = await listTasks(token, teamId, projectId);
       setTasks(tasksPayload.tasks);
     } catch (err) {
@@ -385,7 +430,7 @@ export default function ProjectCycleSchedulePage() {
         {schedule?.project_name || "项目"} · 全局周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        写出需求（每行一条），一键生成「澄清 → 方案 → 开发 → 验收 → 交付」全周期排期，并同步成真实任务。
+        写出需求后生成全周期阶段，并自动排到「每一天具体做什么」；也可在「每日任务」按天执行。
       </p>
 
       {!isLoaded ? (
@@ -465,6 +510,14 @@ export default function ProjectCycleSchedulePage() {
                         onChange={(e) => setCreateTasks(e.target.checked)}
                       />
                       生成时同步创建真实任务（推荐）
+                    </label>
+                    <label className="mt-2 flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        checked={weekdaysOnly}
+                        onChange={(e) => setWeekdaysOnly(e.target.checked)}
+                      />
+                      每日排期只排工作日
                     </label>
                   </div>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -565,6 +618,30 @@ export default function ProjectCycleSchedulePage() {
                         />
                         重新生成时同步创建真实任务
                       </label>
+                      <label className="mt-2 flex items-center gap-2 text-xs text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={weekdaysOnly}
+                          onChange={(e) => setWeekdaysOnly(e.target.checked)}
+                        />
+                        每日排期只排工作日
+                      </label>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy || schedule.work_item_count === 0}
+                          onClick={() => void onExpandDaily()}
+                          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          {busy ? "展开中…" : "重新展开为每日排期"}
+                        </button>
+                        <Link
+                          href={`/teams/${teamId}/projects/${projectId}/daily`}
+                          className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-xs text-zinc-800 hover:bg-zinc-50"
+                        >
+                          打开每日任务
+                        </Link>
+                      </div>
                     </div>
                     <ul className="flex gap-3 overflow-x-auto pb-1">
                       {schedule.phases.map((phase, index) => (
@@ -714,6 +791,65 @@ export default function ProjectCycleSchedulePage() {
                         </tbody>
                       </table>
                     </div>
+                  </section>
+
+                  <section>
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                        每日具体排期
+                      </h2>
+                      <p className="text-xs text-zinc-500">
+                        {dailyPlan
+                          ? `${dailyPlan.day_count} 天 · ${dailyPlan.assigned_work_item_count} 项`
+                          : "生成需求排期后会自动展开到每一天"}
+                      </p>
+                    </div>
+                    {!dailyPlan || dailyPlan.days.length === 0 ? (
+                      <div className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-600">
+                        还没有按天排期。点「重新展开为每日排期」，系统会按阶段日期与工时容量，把工作项落到具体日期。
+                      </div>
+                    ) : (
+                      <ul className="space-y-3">
+                        {dailyPlan.days.map((day) => (
+                          <li
+                            key={day.date}
+                            className="rounded-md border border-zinc-200 px-4 py-3"
+                          >
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <p className="text-sm font-medium text-zinc-900">
+                                {day.date}
+                                {day.phase_name ? (
+                                  <span className="ml-2 text-xs font-normal text-zinc-500">
+                                    {day.phase_name}
+                                  </span>
+                                ) : null}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                约 {day.total_planned_hours}h
+                              </p>
+                            </div>
+                            <ul className="mt-2 space-y-1">
+                              {day.assignments.map((a) => (
+                                <li
+                                  key={`${day.date}-${a.work_item_id}-${a.title}`}
+                                  className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-700"
+                                >
+                                  <span>
+                                    {a.title}
+                                    <span className="ml-2 text-xs text-zinc-400">
+                                      {a.phase_name}
+                                    </span>
+                                  </span>
+                                  <span className="text-xs text-zinc-500">
+                                    {a.planned_hours}h · {memberLabel(a.assignee_user_id)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </section>
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-5">

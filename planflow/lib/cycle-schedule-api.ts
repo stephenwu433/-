@@ -264,3 +264,70 @@ export function confirmCycleSchedule(
     method: "POST",
   });
 }
+
+export type DailyPlanAssignment = {
+  work_item_id: string;
+  task_id: string | null;
+  phase_id: string;
+  phase_name: string;
+  title: string;
+  assignee_user_id: string | null;
+  planned_hours: number;
+  status: string;
+};
+
+export type DailyPlanDay = {
+  date: string;
+  phase_id: string | null;
+  phase_name: string | null;
+  total_planned_hours: number;
+  assignments: DailyPlanAssignment[];
+};
+
+export type DailyPlan = {
+  project_id: string;
+  team_id: string;
+  project_name: string;
+  planned_start: string | null;
+  planned_end: string | null;
+  member_daily_hours: number;
+  weekdays_only: boolean;
+  assigned_work_item_count: number;
+  created_task_count: number;
+  updated_task_count: number;
+  day_count: number;
+  days: DailyPlanDay[];
+  schedule: CycleSchedule | null;
+};
+
+export function expandCycleScheduleToDaily(
+  token: string,
+  teamId: string,
+  projectId: string,
+  input: {
+    weekdays_only?: boolean;
+    create_tasks?: boolean;
+    pin_work_item_dates?: boolean;
+    mark_confirmed?: boolean;
+  } = {},
+) {
+  return apiFetch<DailyPlan>(`${base(teamId, projectId)}/expand-daily`, token, {
+    method: "POST",
+    body: JSON.stringify({
+      weekdays_only: input.weekdays_only ?? true,
+      create_tasks: input.create_tasks ?? true,
+      pin_work_item_dates: input.pin_work_item_dates ?? true,
+      mark_confirmed: input.mark_confirmed ?? false,
+    }),
+  });
+}
+
+export function getDailyPlan(
+  token: string,
+  teamId: string,
+  projectId: string,
+  weekdaysOnly = true,
+) {
+  const qs = weekdaysOnly ? "" : "?weekdays_only=false";
+  return apiFetch<DailyPlan>(`${base(teamId, projectId)}/daily-plan${qs}`, token);
+}
