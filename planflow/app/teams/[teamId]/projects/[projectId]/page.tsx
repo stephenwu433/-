@@ -2,10 +2,11 @@
 
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { WorkbenchShell } from "@/components/WorkbenchShell";
+import { generateCycleSchedule } from "@/lib/cycle-schedule-api";
 import { listMembers, JOB_TITLE_LABELS, type JobTitle, type TeamMember } from "@/lib/members-api";
 import {
   addProjectMember,
@@ -15,6 +16,10 @@ import {
   type ProjectMember,
 } from "@/lib/project-members-api";
 import {
+  MEMBER_DAILY_HOURS_MAX,
+  MEMBER_DAILY_HOURS_MIN,
+  clampMemberDailyHours,
+  deleteProject,
   listTeamProjects,
   updateProject,
   type Project,
@@ -40,6 +45,7 @@ const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
 
 export default function ProjectTasksPage() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
+  const router = useRouter();
   const params = useParams<{ teamId: string; projectId: string }>();
   const teamId = typeof params.teamId === "string" ? params.teamId : "";
   const projectId = typeof params.projectId === "string" ? params.projectId : "";
@@ -54,6 +60,8 @@ export default function ProjectTasksPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [memberBusy, setMemberBusy] = useState(false);
   const [addUserId, setAddUserId] = useState("");
@@ -182,7 +190,7 @@ export default function ProjectTasksPage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
-      const hours = Number(settingsHours);
+      const hours = clampMemberDailyHours(Number(settingsHours));
       const updated = await updateProject(token, teamId, projectId, {
         name: trimmed,
         description: settingsDescription.trim() || null,
@@ -193,8 +201,7 @@ export default function ProjectTasksPage() {
         clear_schedule: !settingsStart && !settingsEnd,
         owner_user_id: settingsOwner || null,
         clear_owner: !settingsOwner,
-        member_daily_hours:
-          Number.isFinite(hours) && hours >= 0 ? hours : 6,
+        member_daily_hours: hours,
         plan_confirmed: settingsConfirmed,
       });
       setProject(updated);
@@ -203,6 +210,62 @@ export default function ProjectTasksPage() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSettingsSaving(false);
+    }
+  }
+
+  async function onGenerateSchedule() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      // Persist latest settings first so generate uses current name/objective/dates.
+      if (project) {
+        const hours = clampMemberDailyHours(Number(settingsHours));
+        await updateProject(token, teamId, projectId, {
+          name: settingsName.trim() || project.name,
+          description: settingsDescription.trim() || null,
+          objective: settingsObjective.trim() || null,
+          planned_start: settingsStart || null,
+          planned_end: settingsEnd || null,
+          clear_schedule: !settingsStart && !settingsEnd,
+          member_daily_hours: hours,
+        });
+      }
+      await generateCycleSchedule(token, teamId, projectId, {
+        replace_existing: true,
+        seed_mode: "from_requirements",
+        phase_count: 5,
+        requirements_text: settingsObjective.trim() || null,
+        save_requirements_to_project: Boolean(settingsObjective.trim()),
+        create_tasks: true,
+      });
+      router.push(`/teams/${teamId}/projects/${projectId}/schedule`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function onDeleteProject() {
+    if (
+      !window.confirm(
+        `确定删除当前项目「${project?.name || ""}」？此操作不可恢复。`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await deleteProject(token, teamId, projectId);
+      router.push("/portfolio");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setDeleting(false);
     }
   }
 
@@ -367,17 +430,20 @@ export default function ProjectTasksPage() {
                   maxLength={2000}
                   className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
                 />
-                <textarea
-                  value={settingsObjective}
-                  onChange={(e) => setSettingsObjective(e.target.value)}
-                  placeholder="项目目标 / 成功标准"
-                  maxLength={4000}
-                  rows={3}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
-                />
+                <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                  项目目标或项目内容
+                  <textarea
+                    value={settingsObjective}
+                    onChange={(e) => setSettingsObjective(e.target.value)}
+                    placeholder="可选：写下目标、范围或关键内容；也可只填项目名称后直接生成排期"
+                    maxLength={4000}
+                    rows={3}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                  />
+                </label>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                    开始日期
+                    计划开始日期
                     <input
                       type="date"
                       value={settingsStart}
@@ -386,7 +452,7 @@ export default function ProjectTasksPage() {
                     />
                   </label>
                   <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                    结束日期
+                    计划结束日期
                     <input
                       type="date"
                       value={settingsEnd}
@@ -412,11 +478,11 @@ export default function ProjectTasksPage() {
                     </select>
                   </label>
                   <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
-                    成员日人均工时
+                    成员每日可用工时（{MEMBER_DAILY_HOURS_MIN}–{MEMBER_DAILY_HOURS_MAX}）
                     <input
                       type="number"
-                      min={0}
-                      max={24}
+                      min={MEMBER_DAILY_HOURS_MIN}
+                      max={MEMBER_DAILY_HOURS_MAX}
                       step={0.5}
                       value={settingsHours}
                       onChange={(e) => setSettingsHours(e.target.value)}
@@ -454,6 +520,30 @@ export default function ProjectTasksPage() {
                   >
                     {settingsSaving ? "保存中…" : "保存设置"}
                   </button>
+                </div>
+                <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+                  <button
+                    type="button"
+                    disabled={generating || deleting}
+                    onClick={() => void onGenerateSchedule()}
+                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {generating ? "生成中…" : "生成本项目全周期排期"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={generating || deleting}
+                    onClick={() => void onDeleteProject()}
+                    className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? "删除中…" : "删除当前项目"}
+                  </button>
+                  <Link
+                    href="/teams"
+                    className="text-sm text-zinc-600 underline hover:text-zinc-900"
+                  >
+                    ＋ 再新建一个项目
+                  </Link>
                 </div>
               </form>
             ) : null}

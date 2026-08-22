@@ -11,7 +11,11 @@ export type DailyTaskCard = {
   my_hours: number;
   my_note: string | null;
   my_entry_id: string | null;
+  /** Per-task completion for the current user on this day (0–100). */
+  my_completion_percent: number;
   total_hours: number;
+  /** Planned / estimated hours for the task (from Task.estimated_hours). */
+  planned_hours: number;
 };
 
 export type DailyTasksResponse = {
@@ -36,8 +40,18 @@ export type TimeEntry = {
   work_date: string;
   hours: number;
   note: string | null;
+  completion_percent: number;
   created_at: string;
   updated_at: string;
+};
+
+export type UpsertTimeEntryInput = {
+  hours: number;
+  note?: string | null;
+  /** Per-task completion percent (0–100). */
+  completion_percent?: number | null;
+  /** When true and completion_percent is 100, set task status to review. */
+  apply_review_status?: boolean;
 };
 
 function base(teamId: string, projectId: string) {
@@ -89,17 +103,24 @@ export function upsertTimeEntry(
   projectId: string,
   taskId: string,
   workDate: string,
-  body: { hours: number; note?: string },
+  body: UpsertTimeEntryInput,
 ) {
+  const payload: Record<string, unknown> = {
+    hours: body.hours,
+    note: body.note?.trim() ? body.note.trim() : null,
+  };
+  if (body.completion_percent != null) {
+    payload.completion_percent = body.completion_percent;
+  }
+  if (body.apply_review_status != null) {
+    payload.apply_review_status = body.apply_review_status;
+  }
   return apiFetch<TimeEntry>(
     `${base(teamId, projectId)}/tasks/${taskId}/time-entries/${workDate}`,
     token,
     {
       method: "PUT",
-      body: JSON.stringify({
-        hours: body.hours,
-        note: body.note?.trim() ? body.note.trim() : null,
-      }),
+      body: JSON.stringify(payload),
     },
   );
 }

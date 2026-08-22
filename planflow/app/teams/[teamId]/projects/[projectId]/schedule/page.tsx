@@ -131,16 +131,14 @@ export default function ProjectCycleSchedulePage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
-      if (mode === "from_requirements" && !requirementsText.trim()) {
-        throw new Error("请先填写需求（每行一条），再生成全周期排期。");
-      }
       const payload = await generateCycleSchedule(token, teamId, projectId, {
         replace_existing: replaceExisting,
         seed_mode: mode,
         phase_count: 5,
         requirements_text:
-          mode === "from_requirements" ? requirementsText.trim() : null,
-        save_requirements_to_project: mode === "from_requirements",
+          mode === "from_requirements" ? requirementsText.trim() || null : null,
+        save_requirements_to_project:
+          mode === "from_requirements" && Boolean(requirementsText.trim()),
         create_tasks: mode === "from_requirements" ? createTasks : false,
       });
       setSchedule(payload);
@@ -422,7 +420,7 @@ export default function ProjectCycleSchedulePage() {
         Project Master Plan
       </p>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
-        {schedule?.project_name || "项目"} · 全局周期排期
+        {schedule?.project_name || "项目"} · 全周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
         两步走：① 按「项目目标 + 团队实际岗位」生成总体排期（没有设计/前端也不会硬拆）；② 再分派到每人每天。
@@ -494,7 +492,7 @@ export default function ProjectCycleSchedulePage() {
                       onChange={(e) => setRequirementsText(e.target.value)}
                       rows={8}
                       placeholder={
-                        "例如：\n- 支持邮箱登录与邀请成员\n- 项目总览看板\n- 全局周期排期\n- 每日任务与工时\n- 项目日报"
+                        "例如：\n- 支持邮箱登录与邀请成员\n- 项目总览看板\n- 全周期排期\n- 每日任务与工时\n- 项目日报"
                       }
                       className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm leading-6 text-zinc-900"
                     />
@@ -524,7 +522,7 @@ export default function ProjectCycleSchedulePage() {
                     </Link>
                     <button
                       type="button"
-                      disabled={busy || !requirementsText.trim()}
+                      disabled={busy}
                       onClick={() => void onGenerate(true, "from_requirements")}
                       className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                     >
@@ -563,7 +561,7 @@ export default function ProjectCycleSchedulePage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          disabled={busy || !requirementsText.trim()}
+                          disabled={busy}
                           onClick={() => {
                             if (
                               window.confirm(

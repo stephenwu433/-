@@ -10,6 +10,8 @@ export type WorkloadProjectSlice = {
   project_name: string;
   team_name: string;
   due_task_count: number;
+  /** Planned hours for this project on the view day. */
+  planned_hours: number;
   logged_hours: number;
   member_daily_hours: number;
 };
@@ -19,11 +21,17 @@ export type WorkloadMember = {
   display_name: string;
   project_count: number;
   due_task_count: number;
+  /** Sum of planned hours across projects for the day. */
+  planned_hours: number;
   logged_hours: number;
   capacity_hours: number;
   load_ratio: number;
   projects_per_day: number;
   overloaded: boolean;
+  /** e.g. 「负荷偏高」/「负荷正常」 */
+  load_label: string;
+  /** e.g. 「建议调整排期」/「可继续执行」 */
+  action_hint: string;
   projects: WorkloadProjectSlice[];
 };
 
