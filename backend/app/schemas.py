@@ -381,3 +381,28 @@ class DailyReportResponse(BaseModel):
     work_items: list[DailyReportWorkItem] = Field(default_factory=list)
 
 
+class NotificationResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    team_id: uuid.UUID | None = None
+    project_id: uuid.UUID | None = None
+    type: str
+    category: str
+    title: str
+    body: str | None = None
+    link_path: str | None = None
+    read_at: datetime | None = None
+    created_at: datetime
+    unread: bool = True
+
+
+class NotificationListResponse(BaseModel):
+    unread_count: int
+    notifications: list[NotificationResponse]
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int
+
+
+

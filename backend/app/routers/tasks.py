@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
-from app.models import Project, Task, TeamMember, User
+from app.models import Notification, Project, Task, TeamMember, User
 from app.schemas import (
     TASK_STATUSES,
     TaskCreateRequest,
@@ -151,6 +151,23 @@ def create_task(
         created_by_user_id=current_user.id,
     )
     db.add(task)
+    db.flush()
+    if (
+        body.assignee_user_id is not None
+        and body.assignee_user_id != current_user.id
+    ):
+        db.add(
+            Notification(
+                user_id=body.assignee_user_id,
+                team_id=team_id,
+                project_id=project_id,
+                type="task_assigned",
+                category="任务",
+                title="你有新的任务",
+                body=f"「{title}」已指派给你。",
+                link_path=f"/teams/{team_id}/projects/{project_id}/daily",
+            )
+        )
     db.commit()
     db.refresh(task)
     return _to_response(task)
@@ -193,7 +210,24 @@ def update_task(
         task.assignee_user_id = None
     elif body.assignee_user_id is not None:
         _validate_assignee(db, team_id=team_id, user_id=body.assignee_user_id)
+        previous = task.assignee_user_id
         task.assignee_user_id = body.assignee_user_id
+        if (
+            body.assignee_user_id != previous
+            and body.assignee_user_id != current_user.id
+        ):
+            db.add(
+                Notification(
+                    user_id=body.assignee_user_id,
+                    team_id=team_id,
+                    project_id=project_id,
+                    type="task_assigned",
+                    category="任务",
+                    title="你有新的任务",
+                    body=f"「{task.title}」已指派给你。",
+                    link_path=f"/teams/{team_id}/projects/{project_id}/daily",
+                )
+            )
 
     if body.clear_due_date:
         task.due_date = None

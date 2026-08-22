@@ -240,6 +240,13 @@ export default function ProjectTasksPage() {
         </Link>
         {" · "}
         <Link
+          href={`/teams/${teamId}/projects/${projectId}/notifications`}
+          className="underline hover:text-zinc-800"
+        >
+          站内提醒
+        </Link>
+        {" · "}
+        <Link
           href={`/teams/${teamId}/projects/${projectId}/schedule`}
           className="underline hover:text-zinc-800"
         >
@@ -403,6 +410,12 @@ export default function ProjectTasksPage() {
                   className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50"
                 >
                   项目日报 →
+                </Link>
+                <Link
+                  href={`/teams/${teamId}/projects/${projectId}/notifications`}
+                  className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50"
+                >
+                  站内提醒 →
                 </Link>
               </div>
             </form>

@@ -12,6 +12,7 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import PhaseWorkItem, Project, ProjectPhase, TeamMember, User
+from app.notifications import notify_team_members
 from app.schemas import (
     DEFAULT_PHASE_NAMES,
     PHASE_WORK_ITEM_STATUSES,
@@ -257,6 +258,16 @@ def generate_cycle_schedule(
         db.add(item)
 
     project.plan_confirmed = False
+    notify_team_members(
+        db,
+        team_id=team_id,
+        project_id=project.id,
+        type="cycle_schedule_generated",
+        category="周期",
+        title="全局周期排期已生成",
+        body=f"「{project.name}」已生成 {count} 个阶段与对应工作项，确认后可按计划推进。",
+        link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
+    )
     db.commit()
     db.refresh(project)
     return _build_schedule_response(db, project)
@@ -395,6 +406,16 @@ def confirm_cycle_schedule(
             detail="Generate a cycle schedule before confirming the plan",
         )
     project.plan_confirmed = True
+    notify_team_members(
+        db,
+        team_id=team_id,
+        project_id=project.id,
+        type="cycle_schedule_confirmed",
+        category="周期",
+        title="全局周期计划已确认",
+        body=f"「{project.name}」的全周期计划已确认，可按阶段安排当日工作。",
+        link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
+    )
     db.commit()
     db.refresh(project)
     return _build_schedule_response(db, project)

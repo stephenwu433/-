@@ -2,6 +2,7 @@ import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NotificationsNavLink } from "@/components/NotificationsNavLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 >
                   跨项目负荷
                 </Link>
+                <NotificationsNavLink />
                 <Link
                   href="/teams"
                   className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
