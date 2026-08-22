@@ -345,7 +345,6 @@ JOB_TITLE_LABELS_ZH = {
     "designer": "设计师",
     "frontend": "前端工程师",
     "backend": "后端工程师",
-    "fullstack": "全栈工程师",
     "qa": "测试工程师",
     "ops": "运营",
     "other": "其他",
@@ -400,7 +399,6 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
             pick(
                 "pm",
                 "project_manager",
-                "fullstack",
                 "frontend",
                 "backend",
                 "ops",
@@ -415,7 +413,7 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
         steps.append(("方案设计", "设计方案", "designer"))
 
     # 3) Build — only for engineering roles that exist
-    eng = [j for j in ("fullstack", "frontend", "backend") if j in job_set]
+    eng = [j for j in ("frontend", "backend") if j in job_set]
     if len(eng) == 1:
         label = JOB_TITLE_LABELS_ZH.get(eng[0], eng[0])
         steps.append(("开发实现", f"{label}实现", eng[0]))
@@ -436,7 +434,7 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
         steps.append(("验收测试", "验收确认", "qa"))
 
     # 5) Delivery
-    deliver = pick("ops", "pm", "fullstack", "backend", "frontend", "qa", "designer")
+    deliver = pick("ops", "pm", "backend", "frontend", "qa", "designer")
     steps.append(("交付复盘", "交付收尾", deliver))
     return steps
 
@@ -1469,7 +1467,7 @@ def _infer_job_from_title(title: str) -> str:
     if title.startswith("后端实现") or "后端实现：" in title:
         return "backend"
     if title.startswith("全栈实现") or "全栈实现：" in title:
-        return "fullstack"
+        return "frontend"
     if title.startswith("验收确认") or "验收确认：" in title:
         return "qa"
     if title.startswith("交付收尾") or "交付收尾：" in title or "交付核对" in title:
@@ -1491,7 +1489,7 @@ def _infer_job_from_title(title: str) -> str:
     if "后端" in title or "接口" in title or "API" in title:
         return "backend"
     if "全栈" in title or "开发实现" in title or "实现：" in title:
-        return "fullstack"
+        return "frontend"
     if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品")):
         return "pm"
     return "pm"
@@ -1499,16 +1497,18 @@ def _infer_job_from_title(title: str) -> str:
 
 def _job_fallback_chain(job: str, *, available: set[str]) -> list[str]:
     """Prefer the requested job, then nearby roles that actually exist on the team."""
+    # Legacy "fullstack" members (if any) still match via available set, but are not a selectable title.
     chains = {
-        "pm": ["pm", "ops", "fullstack", "frontend", "backend", "qa", "designer"],
-        "designer": ["designer", "frontend", "pm", "fullstack"],
-        "frontend": ["frontend", "fullstack", "backend", "designer", "pm"],
-        "backend": ["backend", "fullstack", "frontend", "ops", "pm"],
-        "fullstack": ["fullstack", "frontend", "backend", "pm"],
-        "qa": ["qa", "backend", "fullstack", "pm"],
-        "ops": ["ops", "backend", "fullstack", "pm"],
+        "pm": ["pm", "project_manager", "ops", "frontend", "backend", "qa", "designer"],
+        "project_manager": ["project_manager", "pm", "ops", "frontend", "backend"],
+        "designer": ["designer", "frontend", "pm"],
+        "frontend": ["frontend", "backend", "designer", "pm"],
+        "backend": ["backend", "frontend", "ops", "pm"],
+        "qa": ["qa", "backend", "pm"],
+        "ops": ["ops", "backend", "pm"],
+        "other": ["other", "pm", "ops", "frontend", "backend"],
     }
-    ordered = chains.get(job, ["pm", "fullstack", "frontend", "backend", "qa", "ops", "designer"])
+    ordered = chains.get(job, ["pm", "frontend", "backend", "qa", "ops", "designer"])
     if available:
         filtered = [j for j in ordered if j in available]
         if filtered:

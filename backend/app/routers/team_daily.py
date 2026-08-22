@@ -28,7 +28,6 @@ JOB_TITLE_LABELS_ZH = {
     "designer": "设计师",
     "frontend": "前端工程师",
     "backend": "后端工程师",
-    "fullstack": "全栈工程师",
     "qa": "测试工程师",
     "ops": "运营",
     "other": "其他",
