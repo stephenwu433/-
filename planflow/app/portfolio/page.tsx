@@ -114,6 +114,12 @@ function PortfolioPanel() {
         </label>
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/notifications"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
+          >
+            站内提醒
+          </Link>
+          <Link
             href="/workload"
             className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-800 hover:bg-zinc-50"
           >
