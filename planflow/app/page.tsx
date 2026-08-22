@@ -46,6 +46,12 @@ export default function Home() {
                 我的今日任务
               </Link>
               <Link
+                href="/team-day"
+                className="rounded-md border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                团队今日看板
+              </Link>
+              <Link
                 href="/portfolio"
                 className="rounded-md border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
               >

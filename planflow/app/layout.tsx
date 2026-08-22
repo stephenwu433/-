@@ -44,6 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   我的今日
                 </Link>
                 <Link
+                  href="/team-day"
+                  className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
+                >
+                  团队今日
+                </Link>
+                <Link
                   href="/portfolio"
                   className="rounded-md px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100"
                 >
