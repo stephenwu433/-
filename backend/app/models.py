@@ -203,6 +203,9 @@ class PhaseWorkItem(Base):
     estimated_hours: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     status: Mapped[str] = mapped_column(String, nullable=False, default="todo")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
