@@ -115,7 +115,7 @@ class ProjectCreateRequest(BaseModel):
     planned_start: date | None = None
     planned_end: date | None = None
     owner_user_id: uuid.UUID | None = None
-    member_daily_hours: float = Field(default=6.0, ge=0, le=24)
+    member_daily_hours: float = Field(default=6.0, ge=1, le=12)
 
 
 class ProjectResponse(BaseModel):
@@ -150,7 +150,7 @@ class ProjectUpdateRequest(BaseModel):
     clear_schedule: bool = False
     owner_user_id: uuid.UUID | None = None
     clear_owner: bool = False
-    member_daily_hours: float | None = Field(default=None, ge=0, le=24)
+    member_daily_hours: float | None = Field(default=None, ge=1, le=12)
     plan_confirmed: bool | None = None
 
 
@@ -232,6 +232,7 @@ class TaskResponse(BaseModel):
     assignee_user_id: uuid.UUID | None = None
     due_date: date | None = None
     sort_order: int
+    estimated_hours: float = 0.0
     created_at: datetime
 
 
@@ -242,6 +243,9 @@ class TaskListResponse(BaseModel):
 class TimeEntryUpsertRequest(BaseModel):
     hours: float = Field(ge=0, le=24)
     note: str | None = Field(default=None, max_length=2000)
+    completion_percent: int | None = Field(default=None, ge=0, le=100)
+    # When True and completion_percent == 100, set task status to review.
+    apply_review_status: bool = True
 
 
 class TimeEntryResponse(BaseModel):
@@ -253,6 +257,7 @@ class TimeEntryResponse(BaseModel):
     work_date: date
     hours: float
     note: str | None = None
+    completion_percent: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -263,7 +268,9 @@ class DailyTaskCard(BaseModel):
     my_hours: float = 0.0
     my_note: str | None = None
     my_entry_id: uuid.UUID | None = None
+    my_completion_percent: int = 0
     total_hours: float = 0.0
+    planned_hours: float = 0.0
 
 
 class DailyTasksResponse(BaseModel):
@@ -381,6 +388,7 @@ class WorkloadProjectSlice(BaseModel):
     project_name: str
     team_name: str
     due_task_count: int = 0
+    planned_hours: float = 0.0
     logged_hours: float = 0.0
     member_daily_hours: float = 6.0
 
@@ -390,11 +398,14 @@ class WorkloadMemberCard(BaseModel):
     display_name: str
     project_count: int
     due_task_count: int
+    planned_hours: float
     logged_hours: float
     capacity_hours: float
     load_ratio: float
     projects_per_day: float
     overloaded: bool
+    load_label: str = "负荷正常"
+    action_hint: str = "可继续执行"
     projects: list[WorkloadProjectSlice] = Field(default_factory=list)
 
 

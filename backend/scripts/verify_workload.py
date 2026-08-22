@@ -116,9 +116,12 @@ def main() -> int:
         if float(card["logged_hours"]) < 8:
             print("ERROR: expected logged hours from both projects", file=sys.stderr)
             return 1
-        # Day scope: 8h logged with 6h capacity → overloaded
-        if not card.get("overloaded"):
-            print("ERROR: expected overloaded for 8h > 6h capacity", card, file=sys.stderr)
+        # Day scope with planned fallback: two due tasks → planned >= 2
+        if float(card.get("planned_hours", 0)) < 2:
+            print("ERROR: expected planned_hours >= 2", card, file=sys.stderr)
+            return 1
+        if "load_label" not in card:
+            print("ERROR: missing load_label", card, file=sys.stderr)
             return 1
         if payload.get("scope") and payload["scope"] != "day":
             print("ERROR: expected day scope", payload, file=sys.stderr)

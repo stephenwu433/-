@@ -25,7 +25,7 @@ from app.schemas import MeResponse
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
-    version="0.14.0",
+    version="0.15.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.

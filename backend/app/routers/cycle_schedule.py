@@ -256,19 +256,25 @@ def _resolve_phase_names(
         names = [n.strip() for n in opts.phase_names if n and n.strip()]
         if names:
             return names
+    # Reference MVP: always the fixed five full-cycle phases.
     if seed_mode == "from_requirements":
-        pipeline = _pipeline_steps_for_jobs(available_jobs or [])
-        # Unique phase names in pipeline order
-        names: list[str] = []
-        for phase_name, _prefix, _job in pipeline:
-            if phase_name not in names:
-                names.append(phase_name)
-        return names or ["目标与需求", "推进落地", "交付复盘"]
+        return list(DEFAULT_PHASE_NAMES)
     count = opts.phase_count
     names = list(DEFAULT_PHASE_NAMES[:count])
     while len(names) < count:
         names.append(f"阶段 {len(names) + 1}")
     return names
+
+
+# Map role-pipeline step names onto the fixed five reference phases.
+_PIPELINE_TO_FIXED_PHASE = {
+    "目标与需求": 0,
+    "方案设计": 1,
+    "开发实现": 2,
+    "推进落地": 2,
+    "验收测试": 3,
+    "交付复盘": 4,
+}
 
 
 def _hours_for_phase_item(
@@ -309,6 +315,7 @@ def _add_work_item(
             assignee_user_id=assignee_user_id,
             due_date=phase.planned_end,
             sort_order=(max_order[0] + 1) if max_order else 0,
+            estimated_hours=float(estimated_hours or 0.0),
             created_by_user_id=created_by_user_id,
         )
         db.add(task)
@@ -447,15 +454,18 @@ def _seed_from_requirements(
     created_by_user_id: uuid.UUID,
     available_jobs: list[str] | None = None,
 ) -> int:
-    """Build plan from requirements using only steps that match real team jobs."""
+    """Build plan from requirements into the fixed five reference phases."""
     jobs = available_jobs if available_jobs is not None else _team_job_titles(db, team_id=team_id)
     pipeline = _pipeline_steps_for_jobs(jobs)
 
-    # Map phase_name -> ProjectPhase (phases already created to match pipeline names)
-    by_name = {p.name: p for p in phases}
+    def phase_for(pipeline_name: str) -> ProjectPhase:
+        idx = _PIPELINE_TO_FIXED_PHASE.get(pipeline_name, 0)
+        idx = min(max(idx, 0), len(phases) - 1)
+        return phases[idx]
+
     created = 0
 
-    # Kickoff always on first phase
+    # Kickoff always on first fixed phase
     first_phase = phases[0]
     planner = pipeline[0][2] if pipeline else None
     kickoff = [
@@ -481,7 +491,7 @@ def _seed_from_requirements(
 
     for req_index, req in enumerate(requirements):
         for phase_name, prefix, _target_job in pipeline:
-            phase = by_name.get(phase_name) or first_phase
+            phase = phase_for(phase_name)
             weight = 0.45 if "实现" in prefix or "推进" in prefix else 0.28
             _add_work_item(
                 db,
@@ -599,13 +609,8 @@ def generate_cycle_schedule(
         if not requirements:
             requirements = _parse_requirements(project.objective)
         if not requirements:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "请先填写需求（每行一条），或在项目设置里写好目标说明，"
-                    "再生成全周期排期。"
-                ),
-            )
+            # Reference settings CTA can generate from project name/dates alone.
+            requirements = [project.name.strip() or "本项目"]
         if opts.save_requirements_to_project and opts.requirements_text:
             cleaned = opts.requirements_text.strip()
             if cleaned:
@@ -717,7 +722,7 @@ def generate_cycle_schedule(
         project_id=project.id,
         type="cycle_schedule_generated",
         category="周期",
-        title="全局周期排期已生成",
+        title="全周期排期已生成",
         body=f"「{project.name}」已生成 {count} 个阶段（模式：{seed_mode}）{work_item_hint}。",
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,
@@ -1275,6 +1280,7 @@ def expand_cycle_schedule_to_daily(
                         task.due_date = day
                         task.title = item.title
                         task.assignee_user_id = chunk_assignee
+                        task.estimated_hours = float(chunk_hours)
                         task_id = task.id
                         updated_tasks += 1
                     else:
@@ -1297,6 +1303,7 @@ def expand_cycle_schedule_to_daily(
                         assignee_user_id=chunk_assignee,
                         due_date=day,
                         sort_order=(max_order[0] + 1) if max_order else 0,
+                        estimated_hours=float(chunk_hours),
                         created_by_user_id=current_user.id,
                     )
                     db.add(task)
@@ -1615,7 +1622,7 @@ def confirm_cycle_schedule(
         project_id=project.id,
         type="cycle_schedule_confirmed",
         category="周期",
-        title="全局周期计划已确认",
+        title="全周期计划已确认",
         body=f"「{project.name}」的全周期计划已确认，可按阶段安排当日工作。",
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,

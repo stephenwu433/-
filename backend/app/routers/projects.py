@@ -239,6 +239,20 @@ def update_project(
     return _to_response(project)
 
 
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(
+    team_id: uuid.UUID,
+    project_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """Delete a project and cascaded schedule/tasks/reports."""
+    require_team_membership(db, team_id=team_id, user=current_user)
+    project = _get_team_project(db, team_id=team_id, project_id=project_id)
+    db.delete(project)
+    db.commit()
+
+
 schedule_router = APIRouter(prefix="/teams/{team_id}", tags=["schedule"])
 
 

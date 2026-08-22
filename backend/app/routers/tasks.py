@@ -37,6 +37,7 @@ def _to_response(task: Task) -> TaskResponse:
         assignee_user_id=task.assignee_user_id,
         due_date=task.due_date,
         sort_order=task.sort_order,
+        estimated_hours=float(task.estimated_hours or 0.0),
         created_at=task.created_at,
     )
 

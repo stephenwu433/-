@@ -52,6 +52,7 @@ def _task_to_response(task: Task) -> TaskResponse:
         assignee_user_id=task.assignee_user_id,
         due_date=task.due_date,
         sort_order=task.sort_order,
+        estimated_hours=float(task.estimated_hours or 0.0),
         created_at=task.created_at,
     )
 
@@ -66,6 +67,7 @@ def _entry_to_response(entry: TaskTimeEntry) -> TimeEntryResponse:
         work_date=entry.work_date,
         hours=float(entry.hours or 0),
         note=entry.note,
+        completion_percent=int(entry.completion_percent or 0),
         created_at=entry.created_at,
         updated_at=entry.updated_at,
     )
@@ -147,7 +149,9 @@ def list_daily_tasks(
                 my_hours=my_hours,
                 my_note=my_entry.note if my_entry else None,
                 my_entry_id=my_entry.id if my_entry else None,
+                my_completion_percent=int(my_entry.completion_percent or 0) if my_entry else 0,
                 total_hours=total_hours,
+                planned_hours=float(task.estimated_hours or 0.0),
             )
         )
 
@@ -279,6 +283,11 @@ def upsert_time_entry(
         )
         .one_or_none()
     )
+    completion = (
+        int(body.completion_percent)
+        if body.completion_percent is not None
+        else (int(entry.completion_percent or 0) if entry else 0)
+    )
     if entry is None:
         entry = TaskTimeEntry(
             team_id=team_id,
@@ -288,11 +297,18 @@ def upsert_time_entry(
             work_date=work_date,
             hours=body.hours,
             note=note,
+            completion_percent=completion,
         )
         db.add(entry)
     else:
         entry.hours = body.hours
         entry.note = note
+        entry.completion_percent = completion
+
+    if body.apply_review_status and completion >= 100:
+        task.status = "review"
+    elif body.completion_percent is not None and completion < 100 and task.status == "todo":
+        task.status = "doing"
 
     db.commit()
     db.refresh(entry)
