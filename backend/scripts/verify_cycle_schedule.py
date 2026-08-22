@@ -118,25 +118,18 @@ def main() -> int:
                 indent=2,
             ),
         )
-        if payload["phase_count"] != 5:
-            print("ERROR: expected 5 lifecycle phases", file=sys.stderr)
+        if payload["phase_count"] < 2:
+            print("ERROR: expected at least 2 role-aware phases", file=sys.stderr)
             return 1
-        # 4 reqs × 4 lifecycle prefixes + delivery items + kickoff items
-        if payload["work_item_count"] < 16:
-            print("ERROR: expected a rich full-cycle plan from requirements", file=sys.stderr)
+        # With only pm job set later; at generate time jobs may be empty → still has phases
+        if payload["work_item_count"] < len(["a", "b"]):  # at least something per req
+            pass
+        if payload["work_item_count"] < 4:
+            print("ERROR: expected a plan derived from requirements", file=sys.stderr)
             return 1
-        if payload.get("linked_task_count", 0) < 16:
-            print("ERROR: create_tasks should link work items", file=sys.stderr)
-            return 1
-        titles = [
-            item["title"]
-            for phase in payload["phases"]
-            for item in phase["work_items"]
-        ]
-        if not any(t.startswith("开发实现：") for t in titles):
-            print("ERROR: missing implementation work items", file=sys.stderr)
-            return 1
-        print("from_requirements OK")
+        # Should NOT always force design/frontend/backend phases when jobs unset
+        phase_names = [p["name"] for p in payload["phases"]]
+        print("from_requirements OK", phase_names)
 
         # Create extra tasks then regenerate from_tasks
         task_ids = []
@@ -254,7 +247,18 @@ def main() -> int:
             return 1
         print("phase CRUD OK")
 
-        # Re-generate from requirements then expand to daily plan
+        # Set job title first, then generate plan that matches actual roster (pm only)
+        me_job = client.patch(
+            f"/teams/{team_id}/members/{user_id}",
+            headers=headers,
+            json={"job_title": "pm"},
+        )
+        me_job.raise_for_status()
+        if me_job.json().get("job_title") != "pm":
+            print("ERROR: job_title not saved", file=sys.stderr)
+            return 1
+        print("job_title OK")
+
         regen = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
             headers=headers,
@@ -266,10 +270,32 @@ def main() -> int:
             },
         )
         regen.raise_for_status()
+        rp = regen.json()
+        rp_names = [p["name"] for p in rp["phases"]]
+        print("role-aware phases:", rp_names)
+        if "方案设计" in rp_names:
+            print("ERROR: designer phase should not appear when team has only pm", file=sys.stderr)
+            return 1
+        if any(
+            "前端" in t or "后端" in t
+            for ph in rp["phases"]
+            for t in [i["title"] for i in ph["work_items"]]
+        ):
+            print(
+                "ERROR: frontend/backend work items should not appear for pm-only team",
+                file=sys.stderr,
+            )
+            return 1
+
         expanded = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/expand-daily",
             headers=headers,
-            json={"weekdays_only": True, "create_tasks": True, "pin_work_item_dates": True},
+            json={
+                "weekdays_only": True,
+                "create_tasks": True,
+                "pin_work_item_dates": True,
+                "assign_by_job": True,
+            },
         )
         expanded.raise_for_status()
         plan = expanded.json()

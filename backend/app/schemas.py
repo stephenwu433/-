@@ -37,11 +37,28 @@ class TeamMemberResponse(BaseModel):
     email: str | None = None
     display_name: str | None = None
     role: str
+    job_title: str | None = None
     joined_at: datetime
 
 
 class TeamMemberListResponse(BaseModel):
     members: list[TeamMemberResponse]
+
+
+JOB_TITLES = (
+    "pm",
+    "designer",
+    "frontend",
+    "backend",
+    "fullstack",
+    "qa",
+    "ops",
+)
+
+
+class TeamMemberUpdateRequest(BaseModel):
+    job_title: str | None = Field(default=None, max_length=40)
+    clear_job_title: bool = False
 
 
 class InviteCreateRequest(BaseModel):
@@ -400,6 +417,8 @@ class ExpandDailyScheduleRequest(BaseModel):
     # Shrink each work item's planned_start/end to the assigned day.
     pin_work_item_dates: bool = True
     mark_confirmed: bool = False
+    # Assign each item to a person by team member job_title (岗位).
+    assign_by_job: bool = True
 
 
 class DailyPlanAssignment(BaseModel):
@@ -409,8 +428,10 @@ class DailyPlanAssignment(BaseModel):
     phase_name: str
     title: str
     assignee_user_id: uuid.UUID | None = None
+    assignee_job_title: str | None = None
     planned_hours: float = 0.0
     status: str = "todo"
+    matched_job: str | None = None
 
 
 class DailyPlanDay(BaseModel):

@@ -246,14 +246,23 @@ def _parse_requirements(text: str | None) -> list[str]:
 
 
 def _resolve_phase_names(
-    opts: GenerateCycleScheduleRequest, *, seed_mode: str
+    opts: GenerateCycleScheduleRequest,
+    *,
+    seed_mode: str,
+    available_jobs: list[str] | None = None,
 ) -> list[str]:
     if opts.phase_names:
         names = [n.strip() for n in opts.phase_names if n and n.strip()]
         if names:
             return names
     if seed_mode == "from_requirements":
-        return list(REQUIREMENT_CYCLE_PHASE_NAMES)
+        pipeline = _pipeline_steps_for_jobs(available_jobs or [])
+        # Unique phase names in pipeline order
+        names: list[str] = []
+        for phase_name, _prefix, _job in pipeline:
+            if phase_name not in names:
+                names.append(phase_name)
+        return names or ["目标与需求", "推进落地", "交付复盘"]
     count = opts.phase_count
     names = list(DEFAULT_PHASE_NAMES[:count])
     while len(names) < count:
@@ -322,6 +331,80 @@ def _add_work_item(
     return item
 
 
+JOB_TITLE_LABELS_ZH = {
+    "pm": "产品",
+    "designer": "设计",
+    "frontend": "前端",
+    "backend": "后端",
+    "fullstack": "全栈",
+    "qa": "测试",
+    "ops": "运维",
+}
+
+
+def _team_job_titles(db: Session, *, team_id: uuid.UUID) -> list[str]:
+    """Ordered unique job titles currently set on the team (may be empty)."""
+    rows = (
+        db.query(TeamMember.job_title)
+        .filter(TeamMember.team_id == team_id, TeamMember.job_title.is_not(None))
+        .order_by(TeamMember.created_at.asc())
+        .all()
+    )
+    seen: list[str] = []
+    for (job,) in rows:
+        j = (job or "").strip().lower()
+        if j and j not in seen:
+            seen.append(j)
+    return seen
+
+
+def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None]]:
+    """Build (phase_name, title_prefix, target_job) from jobs that actually exist.
+
+    Not every team has design/frontend/backend — only include steps the roster can cover.
+    """
+    job_set = set(jobs)
+    steps: list[tuple[str, str, str | None]] = []
+
+    def pick(*candidates: str) -> str | None:
+        for c in candidates:
+            if c in job_set:
+                return c
+        return jobs[0] if jobs else None
+
+    # 1) Goals / requirements — prefer pm
+    steps.append(("目标与需求", "澄清目标", pick("pm", "fullstack", "frontend", "backend", "ops", "qa", "designer")))
+
+    # 2) Design — only if designer exists
+    if "designer" in job_set:
+        steps.append(("方案设计", "设计方案", "designer"))
+
+    # 3) Build — only for engineering roles that exist
+    eng = [j for j in ("fullstack", "frontend", "backend") if j in job_set]
+    if len(eng) == 1:
+        label = JOB_TITLE_LABELS_ZH.get(eng[0], eng[0])
+        steps.append(("开发实现", f"{label}实现", eng[0]))
+    elif len(eng) > 1:
+        # One shared phase; per-role work items
+        for j in eng:
+            label = JOB_TITLE_LABELS_ZH.get(j, j)
+            steps.append(("开发实现", f"{label}实现", j))
+    elif job_set:
+        # No eng titles — still need to push requirements forward with whoever is there
+        owner_job = pick("ops", "pm", "qa", "designer")
+        label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
+        steps.append(("推进落地", f"{label}推进", owner_job))
+
+    # 4) QA — only if qa exists
+    if "qa" in job_set:
+        steps.append(("验收测试", "验收确认", "qa"))
+
+    # 5) Delivery
+    deliver = pick("ops", "pm", "fullstack", "backend", "frontend", "qa", "designer")
+    steps.append(("交付复盘", "交付收尾", deliver))
+    return steps
+
+
 def _seed_from_requirements(
     db: Session,
     *,
@@ -333,105 +416,73 @@ def _seed_from_requirements(
     default_assignee: uuid.UUID,
     create_tasks: bool,
     created_by_user_id: uuid.UUID,
+    available_jobs: list[str] | None = None,
 ) -> int:
-    """Build a full-cycle plan: each requirement expands across clarify→design→build→accept."""
-    if len(phases) < 4:
-        # Fall back: one work item per requirement on first phase + delivery on last
-        for index, req in enumerate(requirements):
-            _add_work_item(
-                db,
-                team_id=team_id,
-                project=project,
-                phase=phases[0],
-                title=req,
-                assignee_user_id=default_assignee,
-                sort_order=index,
-                estimated_hours=_hours_for_phase_item(phases[0], daily, weight=0.5),
-                create_task=create_tasks,
-                created_by_user_id=created_by_user_id,
-            )
-        if len(phases) > 1:
-            _add_work_item(
-                db,
-                team_id=team_id,
-                project=project,
-                phase=phases[-1],
-                title="交付复盘与上线准备",
-                assignee_user_id=default_assignee,
-                sort_order=0,
-                estimated_hours=_hours_for_phase_item(phases[-1], daily, weight=0.6),
-                create_task=create_tasks,
-                created_by_user_id=created_by_user_id,
-            )
-        return len(requirements) + (1 if len(phases) > 1 else 0)
+    """Build plan from requirements using only steps that match real team jobs."""
+    jobs = available_jobs if available_jobs is not None else _team_job_titles(db, team_id=team_id)
+    pipeline = _pipeline_steps_for_jobs(jobs)
 
-    clarify, design, build, accept = phases[0], phases[1], phases[2], phases[3]
-    delivery = phases[4] if len(phases) > 4 else phases[-1]
-
-    prefixes = (
-        (clarify, "澄清需求"),
-        (design, "设计方案"),
-        (build, "开发实现"),
-        (accept, "验收确认"),
-    )
+    # Map phase_name -> ProjectPhase (phases already created to match pipeline names)
+    by_name = {p.name: p for p in phases}
     created = 0
-    for req_index, req in enumerate(requirements):
-        for phase, prefix in prefixes:
-            _add_work_item(
-                db,
-                team_id=team_id,
-                project=project,
-                phase=phase,
-                title=f"{prefix}：{req}",
-                assignee_user_id=default_assignee,
-                sort_order=req_index,
-                estimated_hours=_hours_for_phase_item(
-                    phase,
-                    daily,
-                    weight=0.45 if phase is build else 0.25,
-                ),
-                create_task=create_tasks,
-                created_by_user_id=created_by_user_id,
-            )
-            created += 1
 
-    delivery_titles = [
-        "上线准备与发布清单",
-        "交付培训 / 使用说明",
-        "周期复盘与遗留项归档",
+    # Kickoff always on first phase
+    first_phase = phases[0]
+    planner = pipeline[0][2] if pipeline else None
+    kickoff = [
+        ("确认项目目标与成功标准", planner),
+        ("对齐干系人与沟通节奏", planner),
     ]
-    if requirements:
-        delivery_titles.insert(0, f"交付核对：{'、'.join(requirements[:3])}" + ("…" if len(requirements) > 3 else ""))
-    for index, title in enumerate(delivery_titles):
+    if project.objective:
+        kickoff.insert(0, (f"对齐总体目标：{project.objective.strip()[:80]}", planner))
+    for index, (title, _job) in enumerate(kickoff):
         _add_work_item(
             db,
             team_id=team_id,
             project=project,
-            phase=delivery,
+            phase=first_phase,
             title=title[:200],
             assignee_user_id=default_assignee,
-            sort_order=index,
-            estimated_hours=_hours_for_phase_item(delivery, daily, weight=0.3),
+            sort_order=1000 + index,
+            estimated_hours=_hours_for_phase_item(first_phase, daily, weight=0.2),
             create_task=create_tasks,
             created_by_user_id=created_by_user_id,
         )
         created += 1
 
-    # Shared kickoff items on clarify phase
-    kickoff = [
-        "确认项目目标与成功标准",
-        "对齐干系人与沟通节奏",
+    for req_index, req in enumerate(requirements):
+        for phase_name, prefix, _target_job in pipeline:
+            phase = by_name.get(phase_name) or first_phase
+            weight = 0.45 if "实现" in prefix or "推进" in prefix else 0.28
+            _add_work_item(
+                db,
+                team_id=team_id,
+                project=project,
+                phase=phase,
+                title=f"{prefix}：{req}"[:200],
+                assignee_user_id=default_assignee,
+                sort_order=req_index,
+                estimated_hours=_hours_for_phase_item(phase, daily, weight=weight),
+                create_task=create_tasks,
+                created_by_user_id=created_by_user_id,
+            )
+            created += 1
+
+    last_phase = phases[-1]
+    delivery_titles = [
+        f"交付核对：{'、'.join(requirements[:3])}" + ("…" if len(requirements) > 3 else ""),
+        "周期复盘与遗留项归档",
     ]
-    for index, title in enumerate(kickoff):
+    for index, title in enumerate(delivery_titles):
         _add_work_item(
             db,
             team_id=team_id,
             project=project,
-            phase=clarify,
-            title=title,
+            phase=last_phase,
+            title=title[:200],
             assignee_user_id=default_assignee,
-            sort_order=1000 + index,
-            estimated_hours=_hours_for_phase_item(clarify, daily, weight=0.2),
+            sort_order=2000 + index,
+            estimated_hours=_hours_for_phase_item(last_phase, daily, weight=0.25),
             create_task=create_tasks,
             created_by_user_id=created_by_user_id,
         )
@@ -513,6 +564,7 @@ def generate_cycle_schedule(
         )
 
     requirements: list[str] = []
+    available_jobs: list[str] = []
     if seed_mode == "from_requirements":
         requirements = _parse_requirements(opts.requirements_text)
         if not requirements:
@@ -529,6 +581,7 @@ def generate_cycle_schedule(
             cleaned = opts.requirements_text.strip()
             if cleaned:
                 project.objective = cleaned[:4000]
+        available_jobs = _team_job_titles(db, team_id=team_id)
 
     existing = (
         db.query(ProjectPhase.id)
@@ -544,7 +597,9 @@ def generate_cycle_schedule(
     if existing and opts.replace_existing:
         _clear_schedule(db, project.id)
 
-    names = _resolve_phase_names(opts, seed_mode=seed_mode)
+    names = _resolve_phase_names(
+        opts, seed_mode=seed_mode, available_jobs=available_jobs
+    )
     count = len(names)
     segments = _split_range(project.planned_start, project.planned_end, count)
     daily = float(project.member_daily_hours or 6.0)
@@ -593,8 +648,12 @@ def generate_cycle_schedule(
             default_assignee=default_assignee,
             create_tasks=bool(opts.create_tasks),
             created_by_user_id=current_user.id,
+            available_jobs=available_jobs,
         )
-        work_item_hint = f"，{created_count} 个工作项（来自 {len(requirements)} 条需求）"
+        job_hint = "、".join(available_jobs) if available_jobs else "未设岗位(按成员均分)"
+        work_item_hint = (
+            f"，{created_count} 个工作项（{len(requirements)} 条需求 · 岗位：{job_hint}）"
+        )
     elif seed_mode == "from_tasks":
         tasks = (
             db.query(Task)
@@ -1040,6 +1099,21 @@ def expand_cycle_schedule_to_daily(
     updated_tasks = 0
     assigned = 0
 
+    job_pools = _load_job_pools(db, team_id=team_id) if opts.assign_by_job else {}
+    all_member_ids = [
+        row[0]
+        for row in db.query(TeamMember.user_id)
+        .filter(TeamMember.team_id == team_id)
+        .order_by(TeamMember.created_at.asc())
+        .all()
+    ]
+    # job_title lookup by user
+    job_by_user = {
+        m.user_id: (m.job_title or None)
+        for m in db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    }
+    person_day_load: dict[tuple[uuid.UUID, date], float] = {}
+
     # day -> list of assignment dicts for response
     day_map: dict[date, list[dict]] = {}
 
@@ -1082,6 +1156,8 @@ def expand_cycle_schedule_to_daily(
             if hours <= 0:
                 hours = round(max(daily_cap * 0.35, 0.5), 1)
 
+            preferred_job = _infer_job_from_title(item.title)
+
             item_days = days
             if item.planned_start and item.planned_end:
                 narrowed = [
@@ -1102,7 +1178,6 @@ def expand_cycle_schedule_to_daily(
                 if room >= 0.25:
                     take = min(remaining, room)
                 else:
-                    # All days are full — still place leftover on least-loaded day.
                     take = remaining
                 take = round(take, 1)
                 if take <= 0:
@@ -1117,7 +1192,19 @@ def expand_cycle_schedule_to_daily(
                 item.planned_start = primary_day
                 item.planned_end = last_day
 
-            assignee = item.assignee_user_id or default_assignee
+            matched_job: str | None = None
+            if opts.assign_by_job:
+                assignee, matched_job = _pick_assignee_for_job(
+                    preferred_job=preferred_job,
+                    pools=job_pools,
+                    person_day_load=person_day_load,
+                    day=primary_day,
+                    default_assignee=default_assignee,
+                    all_member_ids=all_member_ids,
+                )
+                item.assignee_user_id = assignee
+            else:
+                assignee = item.assignee_user_id or default_assignee
 
             for chunk_index, (day, chunk_hours) in enumerate(chunks):
                 title = (
@@ -1125,13 +1212,31 @@ def expand_cycle_schedule_to_daily(
                     if len(chunks) == 1
                     else f"{item.title}（{day.isoformat()}）"
                 )
+                # Re-pick by person capacity on this specific day when assigning by job
+                chunk_assignee = assignee
+                chunk_matched = matched_job
+                if opts.assign_by_job:
+                    chunk_assignee, chunk_matched = _pick_assignee_for_job(
+                        preferred_job=preferred_job,
+                        pools=job_pools,
+                        person_day_load=person_day_load,
+                        day=day,
+                        default_assignee=default_assignee,
+                        all_member_ids=all_member_ids,
+                    )
+                    if chunk_index == 0:
+                        item.assignee_user_id = chunk_assignee
+                person_day_load[(chunk_assignee, day)] = (
+                    person_day_load.get((chunk_assignee, day), 0.0) + chunk_hours
+                )
+
                 task_id = None
                 if chunk_index == 0 and item.task_id is not None:
                     task = db.query(Task).filter(Task.id == item.task_id).one_or_none()
                     if task is not None:
                         task.due_date = day
                         task.title = item.title
-                        task.assignee_user_id = assignee
+                        task.assignee_user_id = chunk_assignee
                         task_id = task.id
                         updated_tasks += 1
                     else:
@@ -1151,7 +1256,7 @@ def expand_cycle_schedule_to_daily(
                         status=item.status
                         if item.status in PHASE_WORK_ITEM_STATUSES
                         else "todo",
-                        assignee_user_id=assignee,
+                        assignee_user_id=chunk_assignee,
                         due_date=day,
                         sort_order=(max_order[0] + 1) if max_order else 0,
                         created_by_user_id=current_user.id,
@@ -1170,9 +1275,11 @@ def expand_cycle_schedule_to_daily(
                         "phase_id": phase.id,
                         "phase_name": phase.name,
                         "title": title[:200],
-                        "assignee_user_id": assignee,
+                        "assignee_user_id": chunk_assignee,
+                        "assignee_job_title": job_by_user.get(chunk_assignee),
                         "planned_hours": chunk_hours,
                         "status": item.status,
+                        "matched_job": chunk_matched or preferred_job,
                     }
                 )
             assigned += 1
@@ -1191,8 +1298,9 @@ def expand_cycle_schedule_to_daily(
         category="周期",
         title="已展开每日工作排期",
         body=(
-            f"「{project.name}」已把阶段工作项排到具体日期"
-            f"（{assigned} 项 → {created_tasks} 新建 / {updated_tasks} 更新任务）。"
+            f"「{project.name}」已按阶段日期"
+            f"{'与岗位' if opts.assign_by_job else ''}"
+            f"展开每日任务（{assigned} 项 → {created_tasks} 新建 / {updated_tasks} 更新）。"
         ),
         link_path=f"/teams/{team_id}/projects/{project.id}/daily",
         exclude_user_id=current_user.id,
@@ -1243,6 +1351,10 @@ def get_daily_plan(
     )
 
     day_map: dict[date, list[dict]] = {}
+    job_by_user = {
+        m.user_id: (m.job_title or None)
+        for m in db.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    }
     for item, phase in items:
         # Prefer linked task due_date; else work item start day
         day = None
@@ -1265,8 +1377,12 @@ def get_daily_plan(
                 "phase_name": phase.name,
                 "title": item.title,
                 "assignee_user_id": item.assignee_user_id,
+                "assignee_job_title": job_by_user.get(item.assignee_user_id)
+                if item.assignee_user_id
+                else None,
                 "planned_hours": float(item.estimated_hours or 0),
                 "status": item.status,
+                "matched_job": _infer_job_from_title(item.title),
             }
         )
 
@@ -1298,13 +1414,118 @@ def _iter_days(start: date, end: date, *, weekdays_only: bool) -> list[date]:
     return days
 
 
+def _infer_job_from_title(title: str) -> str:
+    """Map work-item title to a preferred job_title bucket."""
+    # Explicit prefixes produced by role-aware seeding
+    if title.startswith("设计方案") or "设计方案：" in title:
+        return "designer"
+    if title.startswith("前端实现") or "前端实现：" in title:
+        return "frontend"
+    if title.startswith("后端实现") or "后端实现：" in title:
+        return "backend"
+    if title.startswith("全栈实现") or "全栈实现：" in title:
+        return "fullstack"
+    if title.startswith("验收确认") or "验收确认：" in title:
+        return "qa"
+    if title.startswith("交付收尾") or "交付收尾：" in title or "交付核对" in title:
+        return "ops"
+    if title.startswith("澄清目标") or "澄清目标：" in title:
+        return "pm"
+    if "运维推进" in title or title.startswith("运维"):
+        return "ops"
+    if "产品推进" in title:
+        return "pm"
+    if any(k in title for k in ("高保真", "交互", "视觉", "UI", "UX")):
+        return "designer"
+    if any(k in title for k in ("测试", "联调", "QA", "质量", "验收")):
+        return "qa"
+    if any(k in title for k in ("上线", "发布", "运维", "部署")):
+        return "ops"
+    if "前端" in title or "页面" in title:
+        return "frontend"
+    if "后端" in title or "接口" in title or "API" in title:
+        return "backend"
+    if "全栈" in title or "开发实现" in title or "实现：" in title:
+        return "fullstack"
+    if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品")):
+        return "pm"
+    return "pm"
+
+
+def _job_fallback_chain(job: str, *, available: set[str]) -> list[str]:
+    """Prefer the requested job, then nearby roles that actually exist on the team."""
+    chains = {
+        "pm": ["pm", "ops", "fullstack", "frontend", "backend", "qa", "designer"],
+        "designer": ["designer", "frontend", "pm", "fullstack"],
+        "frontend": ["frontend", "fullstack", "backend", "designer", "pm"],
+        "backend": ["backend", "fullstack", "frontend", "ops", "pm"],
+        "fullstack": ["fullstack", "frontend", "backend", "pm"],
+        "qa": ["qa", "backend", "fullstack", "pm"],
+        "ops": ["ops", "backend", "fullstack", "pm"],
+    }
+    ordered = chains.get(job, ["pm", "fullstack", "frontend", "backend", "qa", "ops", "designer"])
+    if available:
+        filtered = [j for j in ordered if j in available]
+        if filtered:
+            return filtered
+        # No overlap — just use whatever jobs the team has
+        return list(available)
+    return ordered
+
+
+def _load_job_pools(
+    db: Session, *, team_id: uuid.UUID
+) -> dict[str, list[uuid.UUID]]:
+    rows = (
+        db.query(TeamMember)
+        .filter(TeamMember.team_id == team_id)
+        .order_by(TeamMember.created_at.asc())
+        .all()
+    )
+    pools: dict[str, list[uuid.UUID]] = {}
+    for member in rows:
+        job = (member.job_title or "").strip().lower()
+        if not job:
+            continue
+        pools.setdefault(job, []).append(member.user_id)
+    return pools
+
+
+def _pick_assignee_for_job(
+    *,
+    preferred_job: str,
+    pools: dict[str, list[uuid.UUID]],
+    person_day_load: dict[tuple[uuid.UUID, date], float],
+    day: date,
+    default_assignee: uuid.UUID,
+    all_member_ids: list[uuid.UUID],
+) -> tuple[uuid.UUID, str | None]:
+    available = set(pools.keys())
+    for job in _job_fallback_chain(preferred_job, available=available):
+        candidates = pools.get(job) or []
+        if not candidates:
+            continue
+        chosen = min(
+            candidates,
+            key=lambda uid: (person_day_load.get((uid, day), 0.0), str(uid)),
+        )
+        return chosen, job
+    # No job titles set — balance across all members
+    if all_member_ids:
+        chosen = min(
+            all_member_ids,
+            key=lambda uid: (person_day_load.get((uid, day), 0.0), str(uid)),
+        )
+        return chosen, None
+    return default_assignee, None
+
+
 def _build_daily_plan_days(day_map: dict[date, list[dict]]) -> list[DailyPlanDay]:
     result: list[DailyPlanDay] = []
     for day in sorted(day_map.keys()):
         assignments = day_map[day]
         phase_id = assignments[0]["phase_id"] if assignments else None
         phase_name = assignments[0]["phase_name"] if assignments else None
-        # If multiple phases on same day, leave phase blank-ish using first
         total = round(sum(float(a["planned_hours"]) for a in assignments), 1)
         result.append(
             DailyPlanDay(
@@ -1320,8 +1541,10 @@ def _build_daily_plan_days(day_map: dict[date, list[dict]]) -> list[DailyPlanDay
                         phase_name=a["phase_name"],
                         title=a["title"],
                         assignee_user_id=a["assignee_user_id"],
+                        assignee_job_title=a.get("assignee_job_title"),
                         planned_hours=float(a["planned_hours"]),
                         status=a["status"],
+                        matched_job=a.get("matched_job"),
                     )
                     for a in assignments
                 ],
