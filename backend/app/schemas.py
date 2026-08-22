@@ -281,6 +281,15 @@ DEFAULT_PHASE_NAMES = (
     "驻场上线与维护",
 )
 
+# Full-cycle phases used when generating a plan from written requirements.
+REQUIREMENT_CYCLE_PHASE_NAMES = (
+    "需求澄清与目标确认",
+    "方案设计",
+    "开发实现",
+    "联调验收",
+    "交付复盘",
+)
+
 
 class PhaseWorkItemResponse(BaseModel):
     id: uuid.UUID
@@ -364,9 +373,16 @@ class ProjectCycleScheduleResponse(BaseModel):
 class GenerateCycleScheduleRequest(BaseModel):
     replace_existing: bool = True
     phase_count: int = Field(default=5, ge=1, le=12)
-    # phases_only: empty phases; from_tasks: distribute existing tasks; placeholders: old demo items
-    seed_mode: str = Field(default="from_tasks", max_length=40)
+    # from_requirements: build full-cycle plan from requirement text (recommended)
+    # from_tasks / phases_only / placeholders: legacy modes
+    seed_mode: str = Field(default="from_requirements", max_length=40)
     phase_names: list[str] | None = None
+    # Free-text requirements (one item per line). Falls back to project.objective.
+    requirements_text: str | None = Field(default=None, max_length=8000)
+    # Persist requirements_text onto project.objective when generating.
+    save_requirements_to_project: bool = True
+    # Also create real Task rows linked to each generated work item.
+    create_tasks: bool = True
 
 
 class ImportTasksRequest(BaseModel):

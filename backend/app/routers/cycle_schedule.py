@@ -16,6 +16,7 @@ from app.notifications import notify_team_members
 from app.schemas import (
     DEFAULT_PHASE_NAMES,
     PHASE_WORK_ITEM_STATUSES,
+    REQUIREMENT_CYCLE_PHASE_NAMES,
     GenerateCycleScheduleRequest,
     ImportTasksRequest,
     PhaseWorkItemCreateRequest,
@@ -210,16 +211,230 @@ def _estimate_hours(
     return round(max(days, 1) * daily_hours * 0.4, 1)
 
 
-def _resolve_phase_names(opts: GenerateCycleScheduleRequest) -> list[str]:
+def _parse_requirements(text: str | None) -> list[str]:
+    """Split free-text requirements into concrete items (one per line / bullet)."""
+    if not text:
+        return []
+    items: list[str] = []
+    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        line = raw.strip()
+        if not line:
+            continue
+        # Strip common bullet / numbering prefixes: -, *, •, 1., 1)、（1）
+        cleaned = line
+        for prefix in ("- ", "* ", "• ", "· ", "－ ", "— "):
+            if cleaned.startswith(prefix):
+                cleaned = cleaned[len(prefix) :].strip()
+                break
+        while cleaned and cleaned[0].isdigit():
+            cleaned = cleaned[1:].lstrip(" .、)）:：-")
+        if cleaned.startswith(("（", "(")) and len(cleaned) > 2:
+            # "(1) xxx" / "（1）xxx"
+            for closer in ("）", ")"):
+                idx = cleaned.find(closer)
+                if 0 < idx <= 4:
+                    cleaned = cleaned[idx + 1 :].strip()
+                    break
+        cleaned = cleaned.strip(" ；;。.")
+        if cleaned and cleaned not in items:
+            items.append(cleaned[:200])
+    return items[:40]
+
+
+def _resolve_phase_names(
+    opts: GenerateCycleScheduleRequest, *, seed_mode: str
+) -> list[str]:
     if opts.phase_names:
         names = [n.strip() for n in opts.phase_names if n and n.strip()]
         if names:
             return names
+    if seed_mode == "from_requirements":
+        return list(REQUIREMENT_CYCLE_PHASE_NAMES)
     count = opts.phase_count
     names = list(DEFAULT_PHASE_NAMES[:count])
     while len(names) < count:
         names.append(f"阶段 {len(names) + 1}")
     return names
+
+
+def _hours_for_phase_item(
+    phase: ProjectPhase, daily: float, *, weight: float = 0.35
+) -> float:
+    return round(
+        max(_estimate_hours(phase.planned_start, phase.planned_end, daily) * weight, 0.5),
+        1,
+    )
+
+
+def _add_work_item(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project: Project,
+    phase: ProjectPhase,
+    title: str,
+    assignee_user_id: uuid.UUID | None,
+    sort_order: int,
+    estimated_hours: float,
+    create_task: bool,
+    created_by_user_id: uuid.UUID,
+) -> PhaseWorkItem:
+    task_id = None
+    if create_task:
+        max_order = (
+            db.query(Task.sort_order)
+            .filter(Task.project_id == project.id)
+            .order_by(Task.sort_order.desc())
+            .first()
+        )
+        task = Task(
+            team_id=team_id,
+            project_id=project.id,
+            title=title,
+            status="todo",
+            assignee_user_id=assignee_user_id,
+            due_date=phase.planned_end,
+            sort_order=(max_order[0] + 1) if max_order else 0,
+            created_by_user_id=created_by_user_id,
+        )
+        db.add(task)
+        db.flush()
+        task_id = task.id
+
+    item = PhaseWorkItem(
+        team_id=team_id,
+        project_id=project.id,
+        phase_id=phase.id,
+        task_id=task_id,
+        title=title,
+        assignee_user_id=assignee_user_id,
+        planned_start=phase.planned_start,
+        planned_end=phase.planned_end,
+        estimated_hours=estimated_hours,
+        status="todo",
+        sort_order=sort_order,
+    )
+    db.add(item)
+    return item
+
+
+def _seed_from_requirements(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project: Project,
+    phases: list[ProjectPhase],
+    requirements: list[str],
+    daily: float,
+    default_assignee: uuid.UUID,
+    create_tasks: bool,
+    created_by_user_id: uuid.UUID,
+) -> int:
+    """Build a full-cycle plan: each requirement expands across clarify→design→build→accept."""
+    if len(phases) < 4:
+        # Fall back: one work item per requirement on first phase + delivery on last
+        for index, req in enumerate(requirements):
+            _add_work_item(
+                db,
+                team_id=team_id,
+                project=project,
+                phase=phases[0],
+                title=req,
+                assignee_user_id=default_assignee,
+                sort_order=index,
+                estimated_hours=_hours_for_phase_item(phases[0], daily, weight=0.5),
+                create_task=create_tasks,
+                created_by_user_id=created_by_user_id,
+            )
+        if len(phases) > 1:
+            _add_work_item(
+                db,
+                team_id=team_id,
+                project=project,
+                phase=phases[-1],
+                title="交付复盘与上线准备",
+                assignee_user_id=default_assignee,
+                sort_order=0,
+                estimated_hours=_hours_for_phase_item(phases[-1], daily, weight=0.6),
+                create_task=create_tasks,
+                created_by_user_id=created_by_user_id,
+            )
+        return len(requirements) + (1 if len(phases) > 1 else 0)
+
+    clarify, design, build, accept = phases[0], phases[1], phases[2], phases[3]
+    delivery = phases[4] if len(phases) > 4 else phases[-1]
+
+    prefixes = (
+        (clarify, "澄清需求"),
+        (design, "设计方案"),
+        (build, "开发实现"),
+        (accept, "验收确认"),
+    )
+    created = 0
+    for req_index, req in enumerate(requirements):
+        for phase, prefix in prefixes:
+            _add_work_item(
+                db,
+                team_id=team_id,
+                project=project,
+                phase=phase,
+                title=f"{prefix}：{req}",
+                assignee_user_id=default_assignee,
+                sort_order=req_index,
+                estimated_hours=_hours_for_phase_item(
+                    phase,
+                    daily,
+                    weight=0.45 if phase is build else 0.25,
+                ),
+                create_task=create_tasks,
+                created_by_user_id=created_by_user_id,
+            )
+            created += 1
+
+    delivery_titles = [
+        "上线准备与发布清单",
+        "交付培训 / 使用说明",
+        "周期复盘与遗留项归档",
+    ]
+    if requirements:
+        delivery_titles.insert(0, f"交付核对：{'、'.join(requirements[:3])}" + ("…" if len(requirements) > 3 else ""))
+    for index, title in enumerate(delivery_titles):
+        _add_work_item(
+            db,
+            team_id=team_id,
+            project=project,
+            phase=delivery,
+            title=title[:200],
+            assignee_user_id=default_assignee,
+            sort_order=index,
+            estimated_hours=_hours_for_phase_item(delivery, daily, weight=0.3),
+            create_task=create_tasks,
+            created_by_user_id=created_by_user_id,
+        )
+        created += 1
+
+    # Shared kickoff items on clarify phase
+    kickoff = [
+        "确认项目目标与成功标准",
+        "对齐干系人与沟通节奏",
+    ]
+    for index, title in enumerate(kickoff):
+        _add_work_item(
+            db,
+            team_id=team_id,
+            project=project,
+            phase=clarify,
+            title=title,
+            assignee_user_id=default_assignee,
+            sort_order=1000 + index,
+            estimated_hours=_hours_for_phase_item(clarify, daily, weight=0.2),
+            create_task=create_tasks,
+            created_by_user_id=created_by_user_id,
+        )
+        created += 1
+
+    db.flush()
+    return created
 
 
 def _clear_schedule(db: Session, project_id: uuid.UUID) -> None:
@@ -266,7 +481,7 @@ def generate_cycle_schedule(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ProjectCycleScheduleResponse:
-    """Create phases. Seed work items from real tasks (default), empty, or placeholders."""
+    """Create a full-cycle schedule from requirements (or legacy seed modes)."""
     require_team_membership(db, team_id=team_id, user=current_user)
     project = _require_project(db, team_id=team_id, project_id=project_id)
 
@@ -278,12 +493,38 @@ def generate_cycle_schedule(
         )
     _validate_dates(project.planned_start, project.planned_end)
 
-    seed_mode = (opts.seed_mode or "from_tasks").strip().lower()
-    if seed_mode not in {"from_tasks", "phases_only", "placeholders"}:
+    seed_mode = (opts.seed_mode or "from_requirements").strip().lower()
+    if seed_mode not in {
+        "from_requirements",
+        "from_tasks",
+        "phases_only",
+        "placeholders",
+    }:
         raise HTTPException(
             status_code=400,
-            detail="seed_mode must be from_tasks, phases_only, or placeholders",
+            detail=(
+                "seed_mode must be from_requirements, from_tasks, "
+                "phases_only, or placeholders"
+            ),
         )
+
+    requirements: list[str] = []
+    if seed_mode == "from_requirements":
+        requirements = _parse_requirements(opts.requirements_text)
+        if not requirements:
+            requirements = _parse_requirements(project.objective)
+        if not requirements:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "请先填写需求（每行一条），或在项目设置里写好目标说明，"
+                    "再生成全周期排期。"
+                ),
+            )
+        if opts.save_requirements_to_project and opts.requirements_text:
+            cleaned = opts.requirements_text.strip()
+            if cleaned:
+                project.objective = cleaned[:4000]
 
     existing = (
         db.query(ProjectPhase.id)
@@ -299,7 +540,7 @@ def generate_cycle_schedule(
     if existing and opts.replace_existing:
         _clear_schedule(db, project.id)
 
-    names = _resolve_phase_names(opts)
+    names = _resolve_phase_names(opts, seed_mode=seed_mode)
     count = len(names)
     segments = _split_range(project.planned_start, project.planned_end, count)
     daily = float(project.member_daily_hours or 6.0)
@@ -336,7 +577,21 @@ def generate_cycle_schedule(
                 )
             )
 
-    if seed_mode == "from_tasks":
+    work_item_hint = ""
+    if seed_mode == "from_requirements":
+        created_count = _seed_from_requirements(
+            db,
+            team_id=team_id,
+            project=project,
+            phases=phases,
+            requirements=requirements,
+            daily=daily,
+            default_assignee=default_assignee,
+            create_tasks=bool(opts.create_tasks),
+            created_by_user_id=current_user.id,
+        )
+        work_item_hint = f"，{created_count} 个工作项（来自 {len(requirements)} 条需求）"
+    elif seed_mode == "from_tasks":
         tasks = (
             db.query(Task)
             .filter(Task.project_id == project.id)
@@ -369,7 +624,7 @@ def generate_cycle_schedule(
         type="cycle_schedule_generated",
         category="周期",
         title="全局周期排期已生成",
-        body=f"「{project.name}」已生成 {count} 个阶段（模式：{seed_mode}）。",
+        body=f"「{project.name}」已生成 {count} 个阶段（模式：{seed_mode}）{work_item_hint}。",
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,
     )
