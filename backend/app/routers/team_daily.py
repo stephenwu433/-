@@ -26,9 +26,6 @@ JOB_TITLE_LABELS_ZH = {
     "project_manager": "项目经理",
     "pm": "产品经理",
     "designer": "设计师",
-    "frontend": "前端工程师",
-    "backend": "后端工程师",
-    "qa": "测试工程师",
     "ops": "运营",
     "other": "其他",
 }

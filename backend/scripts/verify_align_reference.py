@@ -96,10 +96,10 @@ def main() -> int:
         added = client.post(
             f"/teams/{team_id}/projects/{project_id}/members",
             headers=owner,
-            json={"user_id": member_id, "job_title": "frontend"},
+            json={"user_id": member_id, "job_title": "designer"},
         )
         added.raise_for_status()
-        if added.json().get("job_title") != "frontend":
+        if added.json().get("job_title") != "designer":
             print("ERROR: job_title not saved", added.json(), file=sys.stderr)
             return 1
         print("add project member OK")

@@ -343,9 +343,6 @@ JOB_TITLE_LABELS_ZH = {
     "project_manager": "项目经理",
     "pm": "产品经理",
     "designer": "设计师",
-    "frontend": "前端工程师",
-    "backend": "后端工程师",
-    "qa": "测试工程师",
     "ops": "运营",
     "other": "其他",
 }
@@ -380,7 +377,7 @@ def _project_job_titles(
 def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None]]:
     """Build (phase_name, title_prefix, target_job) from jobs that actually exist.
 
-    Not every team has design/frontend/backend — only include steps the roster can cover.
+    Selectable roles are pm / project_manager / designer / ops / other — no eng/qa titles.
     """
     job_set = set(jobs)
     steps: list[tuple[str, str, str | None]] = []
@@ -391,20 +388,12 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
                 return c
         return jobs[0] if jobs else None
 
-    # 1) Goals / requirements — prefer pm / project_manager
+    # 1) Goals / requirements
     steps.append(
         (
             "目标与需求",
             "澄清目标",
-            pick(
-                "pm",
-                "project_manager",
-                "frontend",
-                "backend",
-                "ops",
-                "qa",
-                "designer",
-            ),
+            pick("pm", "project_manager", "ops", "designer", "other"),
         )
     )
 
@@ -412,29 +401,13 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
     if "designer" in job_set:
         steps.append(("方案设计", "设计方案", "designer"))
 
-    # 3) Build — only for engineering roles that exist
-    eng = [j for j in ("frontend", "backend") if j in job_set]
-    if len(eng) == 1:
-        label = JOB_TITLE_LABELS_ZH.get(eng[0], eng[0])
-        steps.append(("开发实现", f"{label}实现", eng[0]))
-    elif len(eng) > 1:
-        for j in eng:
-            label = JOB_TITLE_LABELS_ZH.get(j, j)
-            steps.append(("开发实现", f"{label}实现", j))
-    elif job_set:
-        owner_job = pick("ops", "pm", "qa", "designer")
-        label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
-        steps.append(("推进落地", f"{label}推进", owner_job))
-    else:
-        # No job titles configured — keep a generic execution step for goals
-        steps.append(("推进落地", "推进落地", None))
+    # 3) Execution — whoever is on the roster (no frontend/backend titles)
+    owner_job = pick("ops", "pm", "project_manager", "designer", "other")
+    label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
+    steps.append(("推进落地", f"{label}推进", owner_job))
 
-    # 4) QA — only if qa exists
-    if "qa" in job_set:
-        steps.append(("验收测试", "验收确认", "qa"))
-
-    # 5) Delivery
-    deliver = pick("ops", "pm", "backend", "frontend", "qa", "designer")
+    # 4) Delivery / review
+    deliver = pick("ops", "pm", "project_manager", "designer", "other")
     steps.append(("交付复盘", "交付收尾", deliver))
     return steps
 
@@ -1459,61 +1432,50 @@ def _iter_days(start: date, end: date, *, weekdays_only: bool) -> list[date]:
 
 def _infer_job_from_title(title: str) -> str:
     """Map work-item title to a preferred job_title bucket."""
-    # Explicit prefixes produced by role-aware seeding
     if title.startswith("设计方案") or "设计方案：" in title:
         return "designer"
-    if title.startswith("前端实现") or "前端实现：" in title:
-        return "frontend"
-    if title.startswith("后端实现") or "后端实现：" in title:
-        return "backend"
-    if title.startswith("全栈实现") or "全栈实现：" in title:
-        return "frontend"
-    if title.startswith("验收确认") or "验收确认：" in title:
-        return "qa"
     if title.startswith("交付收尾") or "交付收尾：" in title or "交付核对" in title:
         return "ops"
     if title.startswith("澄清目标") or "澄清目标：" in title:
         return "pm"
     if "运维推进" in title or title.startswith("运维"):
         return "ops"
-    if "产品推进" in title:
+    if "产品推进" in title or "项目经理推进" in title:
         return "pm"
-    if any(k in title for k in ("高保真", "交互", "视觉", "UI", "UX")):
+    if any(k in title for k in ("高保真", "交互", "视觉", "UI", "UX", "设计")):
         return "designer"
-    if any(k in title for k in ("测试", "联调", "QA", "质量", "验收")):
-        return "qa"
-    if any(k in title for k in ("上线", "发布", "运维", "部署")):
+    if any(k in title for k in ("上线", "发布", "运维", "部署", "运营")):
         return "ops"
-    if "前端" in title or "页面" in title:
-        return "frontend"
-    if "后端" in title or "接口" in title or "API" in title:
-        return "backend"
-    if "全栈" in title or "开发实现" in title or "实现：" in title:
-        return "frontend"
-    if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品")):
+    # Legacy eng/qa titles in old work items → fold into other/ops/pm
+    if any(k in title for k in ("前端", "后端", "全栈", "测试", "联调", "QA", "实现")):
+        return "other"
+    if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品", "项目")):
         return "pm"
     return "pm"
 
 
 def _job_fallback_chain(job: str, *, available: set[str]) -> list[str]:
     """Prefer the requested job, then nearby roles that actually exist on the team."""
-    # Legacy "fullstack" members (if any) still match via available set, but are not a selectable title.
+    # Legacy frontend/backend/qa values may still exist in DB; treat as "other".
+    legacy = {"frontend", "backend", "qa", "fullstack"}
+    normalized = "other" if job in legacy else job
     chains = {
-        "pm": ["pm", "project_manager", "ops", "frontend", "backend", "qa", "designer"],
-        "project_manager": ["project_manager", "pm", "ops", "frontend", "backend"],
-        "designer": ["designer", "frontend", "pm"],
-        "frontend": ["frontend", "backend", "designer", "pm"],
-        "backend": ["backend", "frontend", "ops", "pm"],
-        "qa": ["qa", "backend", "pm"],
-        "ops": ["ops", "backend", "pm"],
-        "other": ["other", "pm", "ops", "frontend", "backend"],
+        "pm": ["pm", "project_manager", "ops", "designer", "other"],
+        "project_manager": ["project_manager", "pm", "ops", "designer", "other"],
+        "designer": ["designer", "pm", "ops", "other"],
+        "ops": ["ops", "pm", "project_manager", "other"],
+        "other": ["other", "pm", "ops", "designer"],
     }
-    ordered = chains.get(job, ["pm", "frontend", "backend", "qa", "ops", "designer"])
+    ordered = chains.get(normalized, ["pm", "ops", "designer", "other"])
     if available:
-        filtered = [j for j in ordered if j in available]
+        # Allow legacy DB titles to still receive work if present
+        expanded_available = set(available)
+        for leg in legacy:
+            if leg in available:
+                expanded_available.add("other")
+        filtered = [j for j in ordered if j in expanded_available]
         if filtered:
             return filtered
-        # No overlap — just use whatever jobs the team has
         return list(available)
     return ordered
 
