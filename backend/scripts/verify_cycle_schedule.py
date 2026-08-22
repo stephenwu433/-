@@ -299,12 +299,9 @@ def main() -> int:
             params={"view_date": first},
         )
         daily.raise_for_status()
-        if daily.json()["task_count"] < 1 and len(daily.json().get("tasks", [])) < 1:
-            # schema may use different field — accept if tasks list non-empty
-            tasks_list = daily.json().get("tasks") or daily.json().get("items") or []
-            if not tasks_list:
-                print("ERROR: daily-tasks empty after expand", daily.json(), file=sys.stderr)
-                return 1
+        if int(daily.json().get("task_count") or 0) < 1:
+            print("ERROR: daily-tasks empty after expand", daily.json(), file=sys.stderr)
+            return 1
         print("expand-daily OK")
 
         preview = client.get(
