@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke test: generate / edit / confirm project cycle schedule.
+"""Smoke test: generate / edit / confirm project cycle schedule with real tasks.
 
 Expects a running API with PLANFLOW_AUTH_MODE=dev.
 """
@@ -85,23 +85,103 @@ def main() -> int:
             return 1
         print("empty schedule OK")
 
+        # Create real tasks first
+        task_ids = []
+        for title in ("需求访谈", "技术方案", "联调验收"):
+            task = client.post(
+                f"/teams/{team_id}/projects/{project_id}/tasks",
+                headers=headers,
+                json={"title": title, "assignee_user_id": user_id},
+            )
+            task.raise_for_status()
+            task_ids.append(task.json()["id"])
+        print("tasks:", task_ids)
+
         generated = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
             headers=headers,
-            json={"replace_existing": True, "phase_count": 5},
+            json={
+                "replace_existing": True,
+                "phase_count": 5,
+                "seed_mode": "from_tasks",
+            },
         )
         generated.raise_for_status()
         payload = generated.json()
-        print("generated:", json.dumps({
-            "phase_count": payload["phase_count"],
-            "work_item_count": payload["work_item_count"],
-            "total_estimated_hours": payload["total_estimated_hours"],
-        }, indent=2))
-        if payload["phase_count"] != 5 or payload["work_item_count"] != 5:
-            print("ERROR: expected 5 phases and 5 work items", file=sys.stderr)
+        print(
+            "generated:",
+            json.dumps(
+                {
+                    "phase_count": payload["phase_count"],
+                    "work_item_count": payload["work_item_count"],
+                    "linked_task_count": payload.get("linked_task_count"),
+                },
+                indent=2,
+            ),
+        )
+        if payload["phase_count"] != 5 or payload["work_item_count"] != 3:
+            print("ERROR: expected 5 phases and 3 linked work items", file=sys.stderr)
+            return 1
+        if payload.get("linked_task_count") != 3:
+            print("ERROR: expected linked_task_count=3", file=sys.stderr)
             return 1
 
-        item = payload["phases"][0]["work_items"][0]
+        # phases_only regenerate
+        phases_only = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
+            headers=headers,
+            json={
+                "replace_existing": True,
+                "phase_count": 3,
+                "seed_mode": "phases_only",
+                "phase_names": ["启动", "开发", "验收"],
+            },
+        )
+        phases_only.raise_for_status()
+        po = phases_only.json()
+        if po["phase_count"] != 3 or po["work_item_count"] != 0:
+            print("ERROR: phases_only should create empty phases", file=sys.stderr)
+            return 1
+        print("phases_only OK")
+
+        phase_id = po["phases"][1]["id"]
+
+        # create custom work item
+        created_item = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/phases/{phase_id}/work-items",
+            headers=headers,
+            json={"title": "手写工作项", "estimated_hours": 2},
+        )
+        created_item.raise_for_status()
+        item = created_item.json()
+        if item.get("task_id"):
+            print("ERROR: new work item should not auto-link", file=sys.stderr)
+            return 1
+        print("create work item OK")
+
+        # sync to task
+        synced = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/work-items/{item['id']}/sync-task",
+            headers=headers,
+        )
+        synced.raise_for_status()
+        if not synced.json().get("task_id"):
+            print("ERROR: sync-task did not set task_id", file=sys.stderr)
+            return 1
+        print("sync-task OK")
+
+        # import remaining unlinked tasks into first phase
+        imported = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/import-tasks",
+            headers=headers,
+            json={"phase_id": po["phases"][0]["id"], "only_unlinked": True},
+        )
+        imported.raise_for_status()
+        if imported.json()["linked_task_count"] < 3:
+            print("ERROR: import-tasks did not link enough tasks", file=sys.stderr)
+            return 1
+        print("import-tasks OK")
+
         patched = client.patch(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/work-items/{item['id']}",
             headers=headers,
@@ -117,6 +197,22 @@ def main() -> int:
             print("ERROR: work item title not updated", file=sys.stderr)
             return 1
         print("patch work item OK")
+
+        # add + delete phase
+        new_phase = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/phases",
+            headers=headers,
+            json={"name": "临时阶段"},
+        )
+        new_phase.raise_for_status()
+        deleted = client.delete(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/phases/{new_phase.json()['id']}",
+            headers=headers,
+        )
+        if deleted.status_code != 204:
+            print(f"ERROR: delete phase expected 204, got {deleted.status_code}", file=sys.stderr)
+            return 1
+        print("phase CRUD OK")
 
         confirmed = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/confirm",

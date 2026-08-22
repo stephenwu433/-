@@ -3,17 +3,26 @@
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   confirmCycleSchedule,
+  createPhase,
+  createWorkItem,
+  deletePhase,
+  deleteWorkItem,
   generateCycleSchedule,
   getCycleSchedule,
+  importTasksIntoSchedule,
+  syncWorkItemToTask,
+  updatePhase,
   updateWorkItem,
   type CycleSchedule,
+  type SeedMode,
   type WorkItemStatus,
 } from "@/lib/cycle-schedule-api";
 import { listMembers, type TeamMember } from "@/lib/members-api";
+import { listTasks, type Task } from "@/lib/tasks-api";
 import { listMyTeams } from "@/lib/teams-api";
 
 const STATUS_LABELS: Record<WorkItemStatus, string> = {
@@ -30,10 +39,17 @@ export default function ProjectCycleSchedulePage() {
 
   const [schedule, setSchedule] = useState<CycleSchedule | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [seedMode, setSeedMode] = useState<SeedMode>("from_tasks");
+  const [newPhaseName, setNewPhaseName] = useState("");
+  const [importPhaseId, setImportPhaseId] = useState("");
+  const [newItemTitleByPhase, setNewItemTitleByPhase] = useState<Record<string, string>>(
+    {},
+  );
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -48,12 +64,15 @@ export default function ProjectCycleSchedulePage() {
       setSchedule(null);
       return;
     }
-    const [payload, membersPayload] = await Promise.all([
+    const [payload, membersPayload, tasksPayload] = await Promise.all([
       getCycleSchedule(token, teamId, projectId),
       listMembers(token, teamId),
+      listTasks(token, teamId, projectId),
     ]);
     setSchedule(payload);
     setMembers(membersPayload.members);
+    setTasks(tasksPayload.tasks);
+    setImportPhaseId((prev) => prev || payload.phases[0]?.id || "");
   }, [getToken, teamId, projectId]);
 
   useEffect(() => {
@@ -74,19 +93,36 @@ export default function ProjectCycleSchedulePage() {
     };
   }, [isLoaded, isSignedIn, teamId, projectId, refresh]);
 
+  const linkedTaskIds = useMemo(() => {
+    const ids = new Set<string>();
+    schedule?.phases.forEach((phase) => {
+      phase.work_items.forEach((item) => {
+        if (item.task_id) ids.add(item.task_id);
+      });
+    });
+    return ids;
+  }, [schedule]);
+
+  const unlinkedTasks = useMemo(
+    () => tasks.filter((t) => !linkedTaskIds.has(t.id)),
+    [tasks, linkedTaskIds],
+  );
+
   async function onGenerate(replaceExisting: boolean) {
     setBusy(true);
     setError(null);
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
-      const payload = await generateCycleSchedule(
-        token,
-        teamId,
-        projectId,
-        replaceExisting,
-      );
+      const payload = await generateCycleSchedule(token, teamId, projectId, {
+        replace_existing: replaceExisting,
+        seed_mode: seedMode,
+        phase_count: 5,
+      });
       setSchedule(payload);
+      if (payload.phases[0]) setImportPhaseId(payload.phases[0].id);
+      const tasksPayload = await listTasks(token, teamId, projectId);
+      setTasks(tasksPayload.tasks);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -101,6 +137,103 @@ export default function ProjectCycleSchedulePage() {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
       const payload = await confirmCycleSchedule(token, teamId, projectId);
+      setSchedule(payload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onAddPhase() {
+    const name = newPhaseName.trim();
+    if (!name) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await createPhase(token, teamId, projectId, { name });
+      setNewPhaseName("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeletePhase(phaseId: string, phaseName: string) {
+    if (!window.confirm(`删除阶段「${phaseName}」及其工作项？`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await deletePhase(token, teamId, projectId, phaseId);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRenamePhase(phaseId: string, name: string) {
+    const next = name.trim();
+    if (!next) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await updatePhase(token, teamId, projectId, phaseId, { name: next });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onAddWorkItem(phaseId: string) {
+    const title = (newItemTitleByPhase[phaseId] || "").trim();
+    if (!title) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await createWorkItem(token, teamId, projectId, phaseId, { title });
+      setNewItemTitleByPhase((prev) => ({ ...prev, [phaseId]: "" }));
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onImportUnlinked(phaseId: string) {
+    if (!phaseId) {
+      setError("请先选择要导入到的阶段");
+      return;
+    }
+    if (unlinkedTasks.length === 0) {
+      setError("没有可导入的未关联任务。可先在「每日任务」创建任务。");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const payload = await importTasksIntoSchedule(
+        token,
+        teamId,
+        projectId,
+        phaseId,
+      );
       setSchedule(payload);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -130,13 +263,62 @@ export default function ProjectCycleSchedulePage() {
         const total = phases
           .flatMap((p) => p.work_items)
           .reduce((sum, item) => sum + Number(item.estimated_hours || 0), 0);
+        const linked = phases
+          .flatMap((p) => p.work_items)
+          .filter((item) => item.task_id).length;
         return {
           ...prev,
           phases,
           total_estimated_hours: Math.round(total * 10) / 10,
+          linked_task_count: linked,
           plan_confirmed: false,
         };
       });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyItemId(null);
+    }
+  }
+
+  async function onSyncTask(itemId: string) {
+    setBusyItemId(itemId);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const updated = await syncWorkItemToTask(token, teamId, projectId, itemId);
+      setSchedule((prev) => {
+        if (!prev) return prev;
+        const phases = prev.phases.map((phase) => ({
+          ...phase,
+          work_items: phase.work_items.map((item) =>
+            item.id === updated.id ? updated : item,
+          ),
+        }));
+        const linked = phases
+          .flatMap((p) => p.work_items)
+          .filter((item) => item.task_id).length;
+        return { ...prev, phases, linked_task_count: linked, plan_confirmed: false };
+      });
+      const tasksPayload = await listTasks(token, teamId, projectId);
+      setTasks(tasksPayload.tasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyItemId(null);
+    }
+  }
+
+  async function onDeleteItem(itemId: string) {
+    if (!window.confirm("删除这个工作项？已关联的任务不会被删除。")) return;
+    setBusyItemId(itemId);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await deleteWorkItem(token, teamId, projectId, itemId);
+      await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -187,7 +369,7 @@ export default function ProjectCycleSchedulePage() {
         {schedule?.project_name || "项目"} · 全局周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        按项目起止日期生成阶段计划，再调整各阶段工作项的负责人、日期与估时。
+        自定义阶段与工作项，并把工作项同步成真实任务（或从已有任务导入）。
       </p>
 
       {!isLoaded ? (
@@ -212,7 +394,7 @@ export default function ProjectCycleSchedulePage() {
             <p className="text-sm text-zinc-500">加载排期…</p>
           ) : schedule ? (
             <>
-              <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <Summary
                   label="项目整体"
                   value={
@@ -230,6 +412,10 @@ export default function ProjectCycleSchedulePage() {
                   value={`${schedule.phase_count} / ${schedule.work_item_count}`}
                 />
                 <Summary
+                  label="已关联任务"
+                  value={String(schedule.linked_task_count ?? 0)}
+                />
+                <Summary
                   label="计划状态"
                   value={schedule.plan_confirmed ? "已确认" : "待确认"}
                 />
@@ -241,8 +427,20 @@ export default function ProjectCycleSchedulePage() {
                     当前项目还没有排期
                   </p>
                   <p className="mt-2 text-sm text-zinc-600">
-                    请先在项目设置里填好开始/结束日期，再生成全周期排期。
+                    先在项目设置填好起止日期，再选择生成方式。默认会把现有任务排进阶段，而不是假模板。
                   </p>
+                  <div className="mx-auto mt-4 max-w-md text-left">
+                    <label className="block text-xs text-zinc-500">生成方式</label>
+                    <select
+                      value={seedMode}
+                      onChange={(e) => setSeedMode(e.target.value as SeedMode)}
+                      className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                    >
+                      <option value="from_tasks">从现有任务生成（推荐）</option>
+                      <option value="phases_only">只生成空阶段</option>
+                      <option value="placeholders">旧版占位工作项</option>
+                    </select>
+                  </div>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <Link
                       href={`/teams/${teamId}/projects/${projectId}`}
@@ -263,32 +461,43 @@ export default function ProjectCycleSchedulePage() {
               ) : (
                 <>
                   <section>
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                       <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
                         阶段总览
                       </h2>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "重新生成会覆盖现有阶段与工作项，确定吗？",
-                            )
-                          ) {
-                            void onGenerate(true);
-                          }
-                        }}
-                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                      >
-                        重新生成
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={seedMode}
+                          onChange={(e) => setSeedMode(e.target.value as SeedMode)}
+                          className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs"
+                        >
+                          <option value="from_tasks">重生成：从任务</option>
+                          <option value="phases_only">重生成：空阶段</option>
+                          <option value="placeholders">重生成：占位项</option>
+                        </select>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "重新生成会覆盖现有阶段与工作项，确定吗？",
+                              )
+                            ) {
+                              void onGenerate(true);
+                            }
+                          }}
+                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          重新生成
+                        </button>
+                      </div>
                     </div>
                     <ul className="flex gap-3 overflow-x-auto pb-1">
                       {schedule.phases.map((phase, index) => (
                         <li
                           key={phase.id}
-                          className={`min-w-[180px] shrink-0 rounded-md border px-3 py-3 ${
+                          className={`min-w-[200px] shrink-0 rounded-md border px-3 py-3 ${
                             index === 0
                               ? "border-zinc-800 bg-zinc-900 text-white"
                               : "border-zinc-200 bg-zinc-50 text-zinc-900"
@@ -299,16 +508,94 @@ export default function ProjectCycleSchedulePage() {
                           >
                             阶段 {index + 1}
                           </p>
-                          <p className="mt-1 text-sm font-medium">{phase.name}</p>
+                          <input
+                            defaultValue={phase.name}
+                            key={`${phase.id}-${phase.name}`}
+                            disabled={busy}
+                            onBlur={(e) => {
+                              const next = e.target.value.trim();
+                              if (!next || next === phase.name) return;
+                              void onRenamePhase(phase.id, next);
+                            }}
+                            className={`mt-1 w-full rounded-md border px-2 py-1 text-sm font-medium ${
+                              index === 0
+                                ? "border-zinc-600 bg-zinc-800 text-white"
+                                : "border-zinc-300 bg-white text-zinc-900"
+                            }`}
+                          />
                           <p
                             className={`mt-2 text-xs ${index === 0 ? "text-zinc-400" : "text-zinc-500"}`}
                           >
                             {phase.planned_start || "?"} →{" "}
                             {phase.planned_end || "?"}
                           </p>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void onDeletePhase(phase.id, phase.name)}
+                            className={`mt-2 text-xs underline disabled:opacity-50 ${
+                              index === 0 ? "text-zinc-300" : "text-zinc-500"
+                            }`}
+                          >
+                            删除阶段
+                          </button>
                         </li>
                       ))}
                     </ul>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <input
+                        value={newPhaseName}
+                        onChange={(e) => setNewPhaseName(e.target.value)}
+                        placeholder="新阶段名称，例如：联调验收"
+                        className="min-w-[220px] flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                      />
+                      <button
+                        type="button"
+                        disabled={busy || !newPhaseName.trim()}
+                        onClick={() => void onAddPhase()}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        添加阶段
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-4">
+                    <h2 className="text-sm font-medium text-zinc-900">
+                      从现有任务导入
+                    </h2>
+                    <p className="mt-1 text-xs text-zinc-600">
+                      未关联排期的任务：{unlinkedTasks.length} 个。导入后工作项会带上
+                      task 链接。
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <select
+                        value={importPhaseId}
+                        onChange={(e) => setImportPhaseId(e.target.value)}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">选择阶段</option>
+                        {schedule.phases.map((phase) => (
+                          <option key={phase.id} value={phase.id}>
+                            {phase.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={busy || !importPhaseId}
+                        onClick={() => void onImportUnlinked(importPhaseId)}
+                        className="rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                      >
+                        导入未关联任务
+                      </button>
+                      <Link
+                        href={`/teams/${teamId}/projects/${projectId}/daily`}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-white"
+                      >
+                        去每日任务创建
+                      </Link>
+                    </div>
                   </section>
 
                   <section>
@@ -316,7 +603,7 @@ export default function ProjectCycleSchedulePage() {
                       工作项安排
                     </h2>
                     <div className="mt-3 overflow-x-auto">
-                      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                      <table className="w-full min-w-[860px] border-collapse text-left text-sm">
                         <thead>
                           <tr className="border-b border-zinc-200 text-xs text-zinc-500">
                             <th className="py-2 pr-3 font-medium">阶段 / 工作项</th>
@@ -324,7 +611,8 @@ export default function ProjectCycleSchedulePage() {
                             <th className="py-2 pr-3 font-medium">计划开始</th>
                             <th className="py-2 pr-3 font-medium">计划结束</th>
                             <th className="py-2 pr-3 font-medium">估时(h)</th>
-                            <th className="py-2 font-medium">状态</th>
+                            <th className="py-2 pr-3 font-medium">状态</th>
+                            <th className="py-2 font-medium">任务</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -335,8 +623,19 @@ export default function ProjectCycleSchedulePage() {
                               items={phase.work_items}
                               members={members}
                               busyItemId={busyItemId}
+                              busy={busy}
+                              newItemTitle={newItemTitleByPhase[phase.id] || ""}
+                              onNewItemTitle={(value) =>
+                                setNewItemTitleByPhase((prev) => ({
+                                  ...prev,
+                                  [phase.id]: value,
+                                }))
+                              }
+                              onAddItem={() => void onAddWorkItem(phase.id)}
                               memberLabel={memberLabel}
                               onPatch={patchItem}
+                              onSync={(id) => void onSyncTask(id)}
+                              onDelete={(id) => void onDeleteItem(id)}
                             />
                           ))}
                         </tbody>
@@ -388,23 +687,35 @@ function PhaseRows({
   items,
   members,
   busyItemId,
+  busy,
+  newItemTitle,
+  onNewItemTitle,
+  onAddItem,
   memberLabel,
   onPatch,
+  onSync,
+  onDelete,
 }: {
   phaseName: string;
   items: CycleSchedule["phases"][number]["work_items"];
   members: TeamMember[];
   busyItemId: string | null;
+  busy: boolean;
+  newItemTitle: string;
+  onNewItemTitle: (value: string) => void;
+  onAddItem: () => void;
   memberLabel: (id: string | null) => string;
   onPatch: (
     itemId: string,
     input: Parameters<typeof updateWorkItem>[4],
   ) => Promise<void>;
+  onSync: (itemId: string) => void;
+  onDelete: (itemId: string) => void;
 }) {
   return (
     <>
       <tr className="border-b border-zinc-100 bg-zinc-50/80">
-        <td colSpan={6} className="py-2 pr-3 text-xs font-medium text-zinc-600">
+        <td colSpan={7} className="py-2 pr-3 text-xs font-medium text-zinc-600">
           {phaseName}
         </td>
       </tr>
@@ -505,7 +816,7 @@ function PhaseRows({
                 className="w-20 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
               />
             </td>
-            <td className="py-2">
+            <td className="py-2 pr-3">
               <select
                 value={status}
                 disabled={disabled}
@@ -521,9 +832,53 @@ function PhaseRows({
                 <option value="done">{STATUS_LABELS.done}</option>
               </select>
             </td>
+            <td className="py-2">
+              <div className="flex flex-col gap-1">
+                {item.task_id ? (
+                  <span className="text-xs text-emerald-700">已关联</span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onSync(item.id)}
+                    className="text-left text-xs text-zinc-700 underline disabled:opacity-50"
+                  >
+                    同步为任务
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onDelete(item.id)}
+                  className="text-left text-xs text-zinc-500 underline disabled:opacity-50"
+                >
+                  删除
+                </button>
+              </div>
+            </td>
           </tr>
         );
       })}
+      <tr className="border-b border-zinc-100">
+        <td colSpan={7} className="py-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={newItemTitle}
+              onChange={(e) => onNewItemTitle(e.target.value)}
+              placeholder={`在「${phaseName}」添加工作项`}
+              className="min-w-[240px] flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              type="button"
+              disabled={busy || !newItemTitle.trim()}
+              onClick={onAddItem}
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+            >
+              添加工作项
+            </button>
+          </div>
+        </td>
+      </tr>
     </>
   );
 }

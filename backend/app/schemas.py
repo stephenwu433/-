@@ -294,6 +294,7 @@ class PhaseWorkItemResponse(BaseModel):
     estimated_hours: float = 0.0
     status: str
     sort_order: int
+    task_id: uuid.UUID | None = None
     created_at: datetime
 
 
@@ -306,6 +307,16 @@ class PhaseWorkItemUpdateRequest(BaseModel):
     clear_dates: bool = False
     estimated_hours: float | None = Field(default=None, ge=0, le=1000)
     status: str | None = Field(default=None, max_length=20)
+
+
+class PhaseWorkItemCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    assignee_user_id: uuid.UUID | None = None
+    planned_start: date | None = None
+    planned_end: date | None = None
+    estimated_hours: float = Field(default=0.0, ge=0, le=1000)
+    status: str = Field(default="todo", max_length=20)
+    task_id: uuid.UUID | None = None
 
 
 class ProjectPhaseResponse(BaseModel):
@@ -327,6 +338,13 @@ class ProjectPhaseUpdateRequest(BaseModel):
     clear_dates: bool = False
 
 
+class ProjectPhaseCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    planned_start: date | None = None
+    planned_end: date | None = None
+    sort_order: int | None = Field(default=None, ge=0, le=1000)
+
+
 class ProjectCycleScheduleResponse(BaseModel):
     project_id: uuid.UUID
     team_id: uuid.UUID
@@ -339,12 +357,23 @@ class ProjectCycleScheduleResponse(BaseModel):
     total_estimated_hours: float = 0.0
     phase_count: int = 0
     work_item_count: int = 0
+    linked_task_count: int = 0
     phases: list[ProjectPhaseResponse] = Field(default_factory=list)
 
 
 class GenerateCycleScheduleRequest(BaseModel):
     replace_existing: bool = True
-    phase_count: int = Field(default=5, ge=2, le=8)
+    phase_count: int = Field(default=5, ge=1, le=12)
+    # phases_only: empty phases; from_tasks: distribute existing tasks; placeholders: old demo items
+    seed_mode: str = Field(default="from_tasks", max_length=40)
+    phase_names: list[str] | None = None
+
+
+class ImportTasksRequest(BaseModel):
+    phase_id: uuid.UUID
+    task_ids: list[uuid.UUID] | None = None
+    only_unlinked: bool = True
+
 
 
 class DailyReportWorkItem(BaseModel):
