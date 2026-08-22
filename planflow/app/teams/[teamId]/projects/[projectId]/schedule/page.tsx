@@ -445,7 +445,7 @@ export default function ProjectCycleSchedulePage() {
         {schedule?.project_name || "项目"} · 全局周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        两步走：① 根据需求生成总体排期；② 按成员岗位把工作拆到每个人、每一天。
+        两步走：① 按「项目目标 + 团队实际岗位」生成总体排期（没有设计/前端也不会硬拆）；② 再分派到每人每天。
       </p>
 
       {!isLoaded ? (
@@ -856,7 +856,7 @@ export default function ProjectCycleSchedulePage() {
                     </div>
                     {!dailyPlan || dailyPlan.days.length === 0 ? (
                       <div className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-600">
-                        先生成总体排期，再点「按岗位分派每人每日任务」。系统会按工作项类型匹配产品/设计/研发/测试等岗位。
+                        先设置成员岗位并生成总体排期，再点「按岗位分派」。阶段与工作项会跟着团队真实岗位走，不会默认强行出现设计/前端/后端。
                       </div>
                     ) : (
                       <ul className="space-y-3">
