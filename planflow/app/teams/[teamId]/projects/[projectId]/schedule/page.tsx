@@ -22,6 +22,7 @@ import {
   type WorkItemStatus,
 } from "@/lib/cycle-schedule-api";
 import { listMembers, type TeamMember } from "@/lib/members-api";
+import { listTeamProjects } from "@/lib/projects-api";
 import { listTasks, type Task } from "@/lib/tasks-api";
 import { listMyTeams } from "@/lib/teams-api";
 
@@ -44,7 +45,9 @@ export default function ProjectCycleSchedulePage() {
   const [busy, setBusy] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [seedMode, setSeedMode] = useState<SeedMode>("from_tasks");
+  const [seedMode, setSeedMode] = useState<SeedMode>("from_requirements");
+  const [requirementsText, setRequirementsText] = useState("");
+  const [createTasks, setCreateTasks] = useState(true);
   const [newPhaseName, setNewPhaseName] = useState("");
   const [importPhaseId, setImportPhaseId] = useState("");
   const [newItemTitleByPhase, setNewItemTitleByPhase] = useState<Record<string, string>>(
@@ -64,15 +67,20 @@ export default function ProjectCycleSchedulePage() {
       setSchedule(null);
       return;
     }
-    const [payload, membersPayload, tasksPayload] = await Promise.all([
+    const [payload, membersPayload, tasksPayload, projectsPayload] = await Promise.all([
       getCycleSchedule(token, teamId, projectId),
       listMembers(token, teamId),
       listTasks(token, teamId, projectId),
+      listTeamProjects(token, teamId),
     ]);
     setSchedule(payload);
     setMembers(membersPayload.members);
     setTasks(tasksPayload.tasks);
     setImportPhaseId((prev) => prev || payload.phases[0]?.id || "");
+    const project = projectsPayload.projects.find((p) => p.id === projectId);
+    if (project?.objective) {
+      setRequirementsText((prev) => prev || project.objective || "");
+    }
   }, [getToken, teamId, projectId]);
 
   useEffect(() => {
@@ -108,18 +116,26 @@ export default function ProjectCycleSchedulePage() {
     [tasks, linkedTaskIds],
   );
 
-  async function onGenerate(replaceExisting: boolean) {
+  async function onGenerate(replaceExisting: boolean, mode: SeedMode = seedMode) {
     setBusy(true);
     setError(null);
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
+      if (mode === "from_requirements" && !requirementsText.trim()) {
+        throw new Error("请先填写需求（每行一条），再生成全周期排期。");
+      }
       const payload = await generateCycleSchedule(token, teamId, projectId, {
         replace_existing: replaceExisting,
-        seed_mode: seedMode,
+        seed_mode: mode,
         phase_count: 5,
+        requirements_text:
+          mode === "from_requirements" ? requirementsText.trim() : null,
+        save_requirements_to_project: mode === "from_requirements",
+        create_tasks: mode === "from_requirements" ? createTasks : false,
       });
       setSchedule(payload);
+      setSeedMode(mode);
       if (payload.phases[0]) setImportPhaseId(payload.phases[0].id);
       const tasksPayload = await listTasks(token, teamId, projectId);
       setTasks(tasksPayload.tasks);
@@ -369,7 +385,7 @@ export default function ProjectCycleSchedulePage() {
         {schedule?.project_name || "项目"} · 全局周期排期
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        自定义阶段与工作项，并把工作项同步成真实任务（或从已有任务导入）。
+        写出需求（每行一条），一键生成「澄清 → 方案 → 开发 → 验收 → 交付」全周期排期，并同步成真实任务。
       </p>
 
       {!isLoaded ? (
@@ -422,24 +438,34 @@ export default function ProjectCycleSchedulePage() {
               </section>
 
               {empty ? (
-                <section className="rounded-md border border-dashed border-zinc-300 px-6 py-10 text-center">
-                  <p className="text-sm font-medium text-zinc-900">
-                    当前项目还没有排期
+                <section className="rounded-md border border-dashed border-zinc-300 px-6 py-8">
+                  <p className="text-center text-sm font-medium text-zinc-900">
+                    根据需求生成全周期排期
                   </p>
-                  <p className="mt-2 text-sm text-zinc-600">
-                    先在项目设置填好起止日期，再选择生成方式。默认会把现有任务排进阶段，而不是假模板。
+                  <p className="mt-2 text-center text-sm text-zinc-600">
+                    先确认项目设置里有起止日期，再在下方填写需求。系统会按全周期拆成可执行工作项。
                   </p>
-                  <div className="mx-auto mt-4 max-w-md text-left">
-                    <label className="block text-xs text-zinc-500">生成方式</label>
-                    <select
-                      value={seedMode}
-                      onChange={(e) => setSeedMode(e.target.value as SeedMode)}
-                      className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-                    >
-                      <option value="from_tasks">从现有任务生成（推荐）</option>
-                      <option value="phases_only">只生成空阶段</option>
-                      <option value="placeholders">旧版占位工作项</option>
-                    </select>
+                  <div className="mx-auto mt-5 max-w-2xl">
+                    <label className="block text-xs font-medium text-zinc-500">
+                      项目需求（每行一条）
+                    </label>
+                    <textarea
+                      value={requirementsText}
+                      onChange={(e) => setRequirementsText(e.target.value)}
+                      rows={8}
+                      placeholder={
+                        "例如：\n- 支持邮箱登录与邀请成员\n- 项目总览看板\n- 全局周期排期\n- 每日任务与工时\n- 项目日报"
+                      }
+                      className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm leading-6 text-zinc-900"
+                    />
+                    <label className="mt-3 flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        checked={createTasks}
+                        onChange={(e) => setCreateTasks(e.target.checked)}
+                      />
+                      生成时同步创建真实任务（推荐）
+                    </label>
                   </div>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <Link
@@ -450,13 +476,34 @@ export default function ProjectCycleSchedulePage() {
                     </Link>
                     <button
                       type="button"
-                      disabled={busy}
-                      onClick={() => onGenerate(true)}
+                      disabled={busy || !requirementsText.trim()}
+                      onClick={() => void onGenerate(true, "from_requirements")}
                       className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                     >
                       {busy ? "生成中…" : "生成全周期排期"}
                     </button>
                   </div>
+                  <details className="mx-auto mt-6 max-w-2xl text-sm text-zinc-600">
+                    <summary className="cursor-pointer text-zinc-500">其他生成方式</summary>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onGenerate(true, "from_tasks")}
+                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        从现有任务生成
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void onGenerate(true, "phases_only")}
+                        className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        只生成空阶段
+                      </button>
+                    </div>
+                  </details>
                 </section>
               ) : (
                 <>
@@ -466,15 +513,22 @@ export default function ProjectCycleSchedulePage() {
                         阶段总览
                       </h2>
                       <div className="flex flex-wrap items-center gap-2">
-                        <select
-                          value={seedMode}
-                          onChange={(e) => setSeedMode(e.target.value as SeedMode)}
-                          className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs"
+                        <button
+                          type="button"
+                          disabled={busy || !requirementsText.trim()}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "将按当前需求重新生成全周期排期（覆盖现有阶段与工作项），确定吗？",
+                              )
+                            ) {
+                              void onGenerate(true, "from_requirements");
+                            }
+                          }}
+                          className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                         >
-                          <option value="from_tasks">重生成：从任务</option>
-                          <option value="phases_only">重生成：空阶段</option>
-                          <option value="placeholders">重生成：占位项</option>
-                        </select>
+                          按需求重新生成
+                        </button>
                         <button
                           type="button"
                           disabled={busy}
@@ -484,14 +538,33 @@ export default function ProjectCycleSchedulePage() {
                                 "重新生成会覆盖现有阶段与工作项，确定吗？",
                               )
                             ) {
-                              void onGenerate(true);
+                              void onGenerate(true, seedMode);
                             }
                           }}
                           className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
                         >
-                          重新生成
+                          其他方式重生成
                         </button>
                       </div>
+                    </div>
+                    <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
+                      <label className="block text-xs font-medium text-zinc-500">
+                        项目需求（每行一条，可改后点「按需求重新生成」）
+                      </label>
+                      <textarea
+                        value={requirementsText}
+                        onChange={(e) => setRequirementsText(e.target.value)}
+                        rows={4}
+                        className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm leading-6"
+                      />
+                      <label className="mt-2 flex items-center gap-2 text-xs text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={createTasks}
+                          onChange={(e) => setCreateTasks(e.target.checked)}
+                        />
+                        重新生成时同步创建真实任务
+                      </label>
                     </div>
                     <ul className="flex gap-3 overflow-x-auto pb-1">
                       {schedule.phases.map((phase, index) => (

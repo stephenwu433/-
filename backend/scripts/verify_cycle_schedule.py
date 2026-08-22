@@ -85,9 +85,62 @@ def main() -> int:
             return 1
         print("empty schedule OK")
 
-        # Create real tasks first
+        # Primary path: requirements → full-cycle plan
+        requirements = (
+            "- 邮箱登录与成员邀请\n"
+            "1. 项目总览看板\n"
+            "（2）全局周期排期\n"
+            "* 每日任务与工时"
+        )
+        generated = client.post(
+            f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
+            headers=headers,
+            json={
+                "replace_existing": True,
+                "seed_mode": "from_requirements",
+                "requirements_text": requirements,
+                "create_tasks": True,
+                "save_requirements_to_project": True,
+            },
+        )
+        generated.raise_for_status()
+        payload = generated.json()
+        print(
+            "from_requirements:",
+            json.dumps(
+                {
+                    "phase_count": payload["phase_count"],
+                    "work_item_count": payload["work_item_count"],
+                    "linked_task_count": payload.get("linked_task_count"),
+                    "phases": [p["name"] for p in payload["phases"]],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+        if payload["phase_count"] != 5:
+            print("ERROR: expected 5 lifecycle phases", file=sys.stderr)
+            return 1
+        # 4 reqs × 4 lifecycle prefixes + delivery items + kickoff items
+        if payload["work_item_count"] < 16:
+            print("ERROR: expected a rich full-cycle plan from requirements", file=sys.stderr)
+            return 1
+        if payload.get("linked_task_count", 0) < 16:
+            print("ERROR: create_tasks should link work items", file=sys.stderr)
+            return 1
+        titles = [
+            item["title"]
+            for phase in payload["phases"]
+            for item in phase["work_items"]
+        ]
+        if not any(t.startswith("开发实现：") for t in titles):
+            print("ERROR: missing implementation work items", file=sys.stderr)
+            return 1
+        print("from_requirements OK")
+
+        # Create extra tasks then regenerate from_tasks
         task_ids = []
-        for title in ("需求访谈", "技术方案", "联调验收"):
+        for title in ("额外任务A", "额外任务B"):
             task = client.post(
                 f"/teams/{team_id}/projects/{project_id}/tasks",
                 headers=headers,
@@ -95,9 +148,9 @@ def main() -> int:
             )
             task.raise_for_status()
             task_ids.append(task.json()["id"])
-        print("tasks:", task_ids)
+        print("extra tasks:", task_ids)
 
-        generated = client.post(
+        from_tasks = client.post(
             f"/teams/{team_id}/projects/{project_id}/cycle-schedule/generate",
             headers=headers,
             json={
@@ -106,25 +159,12 @@ def main() -> int:
                 "seed_mode": "from_tasks",
             },
         )
-        generated.raise_for_status()
-        payload = generated.json()
-        print(
-            "generated:",
-            json.dumps(
-                {
-                    "phase_count": payload["phase_count"],
-                    "work_item_count": payload["work_item_count"],
-                    "linked_task_count": payload.get("linked_task_count"),
-                },
-                indent=2,
-            ),
-        )
-        if payload["phase_count"] != 5 or payload["work_item_count"] != 3:
-            print("ERROR: expected 5 phases and 3 linked work items", file=sys.stderr)
+        from_tasks.raise_for_status()
+        ft = from_tasks.json()
+        if ft["phase_count"] != 5 or ft["work_item_count"] < 2:
+            print("ERROR: from_tasks regenerate failed", file=sys.stderr)
             return 1
-        if payload.get("linked_task_count") != 3:
-            print("ERROR: expected linked_task_count=3", file=sys.stderr)
-            return 1
+        print("from_tasks OK")
 
         # phases_only regenerate
         phases_only = client.post(

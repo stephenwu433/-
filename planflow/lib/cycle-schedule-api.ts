@@ -6,7 +6,11 @@ import { apiFetch } from "./api-client";
 
 export type WorkItemStatus = "todo" | "doing" | "done";
 
-export type SeedMode = "from_tasks" | "phases_only" | "placeholders";
+export type SeedMode =
+  | "from_requirements"
+  | "from_tasks"
+  | "phases_only"
+  | "placeholders";
 
 export type PhaseWorkItem = {
   id: string;
@@ -78,6 +82,9 @@ export type GenerateScheduleInput = {
   phase_count?: number;
   seed_mode?: SeedMode;
   phase_names?: string[];
+  requirements_text?: string | null;
+  save_requirements_to_project?: boolean;
+  create_tasks?: boolean;
 };
 
 function base(teamId: string, projectId: string) {
@@ -99,8 +106,11 @@ export function generateCycleSchedule(
     body: JSON.stringify({
       replace_existing: input.replace_existing ?? true,
       phase_count: input.phase_count ?? 5,
-      seed_mode: input.seed_mode ?? "from_tasks",
+      seed_mode: input.seed_mode ?? "from_requirements",
       phase_names: input.phase_names,
+      requirements_text: input.requirements_text ?? null,
+      save_requirements_to_project: input.save_requirements_to_project ?? true,
+      create_tasks: input.create_tasks ?? true,
     }),
   });
 }
