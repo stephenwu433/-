@@ -115,7 +115,7 @@ export default function ProjectCycleSchedulePage() {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
       const payload = await generateCycleSchedule(token, teamId, projectId, {
-        replaceExisting,
+        replace_existing: replaceExisting,
         seed_mode: seedMode,
         phase_count: 5,
       });
