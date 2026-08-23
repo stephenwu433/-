@@ -24,8 +24,7 @@ export default function TeamsPage() {
         我的团队
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        这里会调用后端 <code className="text-zinc-800">/teams</code>
-        ：先校验你的登录身份，再创建或查看属于你的团队。
+        创建或加入团队后，即可在团队下管理项目、排期与每日任务。
       </p>
 
       {!isLoaded ? (
