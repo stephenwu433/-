@@ -7,28 +7,38 @@
 | 部分 | 平台 | 说明 |
 |------|------|------|
 | 前端 | [Vercel](https://vercel.com) | 部署 `planflow/` |
-| 后端 API | [Render](https://render.com) | 用仓库里的 `backend/Dockerfile` |
+| 后端 API | [Vercel](https://vercel.com)（推荐，免绑新卡）或 [Render](https://render.com) | 第二个 Vercel 项目，Root=`backend`；或 Render Docker |
 | 数据库 | Neon（已有） | 继续用现有 `DATABASE_URL` |
 | 登录 | Clerk（已有） | 把正式前端域名加进允许列表 |
 
 ---
 
-## 1. 部署后端（Render）
+## 1. 部署后端 API（推荐：第二个 Vercel 项目）
 
-1. 打开 Render → **New → Blueprint**，连上本仓库，选用根目录 `render.yaml`；或 **New Web Service**，Root 选 `backend`，Runtime = Docker。
-2. 环境变量（必填）：
+不用绑新卡（你已有 Vercel 账号即可）。
+
+1. Vercel → **Add New… → Project**，仍选仓库 `ban`。
+2. **Root Directory** 选 `backend`（不要选 planflow）。
+3. Framework 若识别为 Other/Python/FastAPI 即可。
+4. 环境变量（必填）：
 
 ```text
 PLANFLOW_AUTH_MODE=clerk
 DATABASE_URL=（Neon 连接串，带 sslmode=require）
 CLERK_PUBLISHABLE_KEY=（与前端相同的 pk_…）
-PLANFLOW_CORS_ORIGINS=https://你的前端域名
+PLANFLOW_CORS_ORIGINS=https://ban-weld.vercel.app
 ```
 
-3. 部署成功后记下 API 地址，例如：`https://planflow-api.onrender.com`  
-4. 浏览器打开 `https://…/health` 应返回 `"status":"ok"`。
+5. Deploy。记下 API 地址，例如：`https://ban-api-xxx.vercel.app`  
+6. 打开 `https://你的-API/health` 应返回 `"status":"ok"`。
+7. 回到**前端** Vercel 项目 → 环境变量，把  
+   `NEXT_PUBLIC_PLANFLOW_API_URL` 改成这个 API 地址 → 重新部署前端。
 
-> 首次启动会自动跑 `scripts/migrate.py` 建表。
+> 数据库表需已在 Neon 执行过迁移（本地/`migrate.py` 跑过即可）。
+
+### 备选：Render Docker
+
+Render 免费档可能要求绑卡验证。若你愿意绑卡：用仓库 `render.yaml` 或 Web Service + Root=`backend` + Docker，环境变量同上。
 
 ---
 
