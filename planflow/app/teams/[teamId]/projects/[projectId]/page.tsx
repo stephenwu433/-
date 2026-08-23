@@ -7,7 +7,13 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { WorkbenchShell } from "@/components/WorkbenchShell";
 import { generateCycleSchedule } from "@/lib/cycle-schedule-api";
-import { listMembers, JOB_TITLE_LABELS, type JobTitle, type TeamMember } from "@/lib/members-api";
+import {
+  listMembers,
+  updateMemberDisplayName,
+  JOB_TITLE_LABELS,
+  type JobTitle,
+  type TeamMember,
+} from "@/lib/members-api";
 import {
   addProjectMember,
   listProjectMembers,
@@ -74,6 +80,8 @@ export default function ProjectTasksPage() {
   const [settingsStart, setSettingsStart] = useState("");
   const [settingsEnd, setSettingsEnd] = useState("");
   const [settingsOwner, setSettingsOwner] = useState("");
+  const [ownerNameDraft, setOwnerNameDraft] = useState("");
+  const [ownerRenaming, setOwnerRenaming] = useState(false);
   const [settingsHours, setSettingsHours] = useState("6");
   const [settingsStatus, setSettingsStatus] = useState<ProjectStatus>("active");
   const [settingsConfirmed, setSettingsConfirmed] = useState(false);
@@ -85,6 +93,7 @@ export default function ProjectTasksPage() {
     setSettingsStart(p.planned_start ?? "");
     setSettingsEnd(p.planned_end ?? "");
     setSettingsOwner(p.owner_user_id ?? "");
+    setOwnerNameDraft("");
     setSettingsHours(String(p.member_daily_hours ?? 6));
     setSettingsStatus(
       p.status === "paused" || p.status === "done" ? p.status : "active",
@@ -119,8 +128,13 @@ export default function ProjectTasksPage() {
     setTasks(tasksPayload.tasks);
     setTeamMembers(membersPayload.members);
     setProjectMembers(projectMembersPayload.members);
-    if (matched) syncSettingsForm(matched);
-    else setError("找不到这个项目。");
+    if (matched) {
+      syncSettingsForm(matched);
+      const owner = membersPayload.members.find(
+        (m) => m.user_id === matched.owner_user_id,
+      );
+      setOwnerNameDraft(owner?.display_name || "");
+    } else setError("找不到这个项目。");
   }, [getToken, teamId, projectId, syncSettingsForm]);
 
   useEffect(() => {
@@ -466,7 +480,12 @@ export default function ProjectTasksPage() {
                     负责人
                     <select
                       value={settingsOwner}
-                      onChange={(e) => setSettingsOwner(e.target.value)}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSettingsOwner(id);
+                        const m = teamMembers.find((x) => x.user_id === id);
+                        setOwnerNameDraft(m?.display_name || "");
+                      }}
                       className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
                     >
                       <option value="">未指定</option>
@@ -490,6 +509,59 @@ export default function ProjectTasksPage() {
                     />
                   </label>
                 </div>
+                {settingsOwner ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-500">
+                      负责人显示名
+                      <input
+                        value={ownerNameDraft}
+                        onChange={(e) => setOwnerNameDraft(e.target.value)}
+                        placeholder="例如：张三"
+                        maxLength={80}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={
+                        ownerRenaming ||
+                        !ownerNameDraft.trim() ||
+                        settingsSaving
+                      }
+                      onClick={async () => {
+                        setOwnerRenaming(true);
+                        setError(null);
+                        try {
+                          const token = await getToken();
+                          if (!token) throw new Error("拿不到登录 token");
+                          const updated = await updateMemberDisplayName(
+                            token,
+                            teamId,
+                            settingsOwner,
+                            ownerNameDraft.trim(),
+                          );
+                          setTeamMembers((prev) =>
+                            prev.map((x) =>
+                              x.user_id === settingsOwner
+                                ? { ...x, display_name: updated.display_name }
+                                : x,
+                            ),
+                          );
+                          setOwnerNameDraft(updated.display_name || "");
+                        } catch (err) {
+                          setError(
+                            err instanceof Error ? err.message : String(err),
+                          );
+                        } finally {
+                          setOwnerRenaming(false);
+                        }
+                      }}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                    >
+                      {ownerRenaming ? "保存中…" : "保存显示名"}
+                    </button>
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
                     状态

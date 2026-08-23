@@ -73,6 +73,30 @@ export function updateMemberJobTitle(
   });
 }
 
+export function updateMemberDisplayName(
+  token: string,
+  teamId: string,
+  userId: string,
+  displayName: string,
+) {
+  return apiFetch<TeamMember>(`/teams/${teamId}/members/${userId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export function updateMyDisplayName(token: string, displayName: string) {
+  return apiFetch<{
+    id: string;
+    clerk_user_id: string;
+    email: string | null;
+    display_name: string | null;
+  }>("/me", token, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
 export function createInvite(
   token: string,
   teamId: string,

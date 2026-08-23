@@ -15,6 +15,10 @@ class MeResponse(BaseModel):
     display_name: str | None = None
 
 
+class MeUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=80)
+
+
 class TeamCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=80)
 
@@ -65,6 +69,7 @@ JOB_TITLE_LABELS_ZH = {
 class TeamMemberUpdateRequest(BaseModel):
     job_title: str | None = Field(default=None, max_length=40)
     clear_job_title: bool = False
+    display_name: str | None = Field(default=None, max_length=80)
 
 
 class InviteCreateRequest(BaseModel):

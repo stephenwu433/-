@@ -207,7 +207,8 @@ def upsert_user_from_claims(db: Session, claims: AuthClaims) -> User:
     if claims.email and claims.email != user.email:
         user.email = claims.email
         changed = True
-    if claims.display_name and claims.display_name != user.display_name:
+    # Only fill empty display_name from JWT — never overwrite a user-set name.
+    if claims.display_name and not user.display_name:
         user.display_name = claims.display_name
         changed = True
     if changed:

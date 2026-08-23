@@ -9,6 +9,7 @@ import {
   createInvite,
   listInvites,
   listMembers,
+  updateMemberDisplayName,
   updateMemberJobTitle,
   JOB_TITLE_LABELS,
   type Invite,
@@ -106,6 +107,8 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const canManageInvites = team?.role === "owner" || team?.role === "admin";
@@ -307,10 +310,82 @@ function TeamProjectsPanel({ teamId }: { teamId: string }) {
                 key={m.user_id}
                 className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
               >
-                <span className="text-zinc-900">
-                  {m.display_name || m.email || m.clerk_user_id}
-                  <span className="ml-2 text-xs text-zinc-400">{m.role}</span>
-                </span>
+                <div className="min-w-0 flex-1">
+                  {renamingId === m.user_id ? (
+                    <form
+                      className="flex flex-wrap items-center gap-2"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setSaving(true);
+                        setError(null);
+                        try {
+                          const token = await getToken();
+                          if (!token) throw new Error("拿不到登录 token");
+                          const updated = await updateMemberDisplayName(
+                            token,
+                            teamId,
+                            m.user_id,
+                            renameDraft.trim(),
+                          );
+                          setMembers((prev) =>
+                            prev.map((x) =>
+                              x.user_id === m.user_id
+                                ? { ...x, display_name: updated.display_name }
+                                : x,
+                            ),
+                          );
+                          setRenamingId(null);
+                        } catch (err) {
+                          setError(
+                            err instanceof Error ? err.message : String(err),
+                          );
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      <input
+                        value={renameDraft}
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        placeholder="显示名"
+                        maxLength={80}
+                        className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1 text-sm outline-none focus:border-zinc-500"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={saving || !renameDraft.trim()}
+                        className="rounded-md bg-zinc-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+                      >
+                        保存
+                      </button>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setRenamingId(null)}
+                        className="rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700"
+                      >
+                        取消
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="text-zinc-900">
+                      {m.display_name || m.email || m.clerk_user_id}
+                      <span className="ml-2 text-xs text-zinc-400">{m.role}</span>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => {
+                          setRenamingId(m.user_id);
+                          setRenameDraft(m.display_name || "");
+                        }}
+                        className="ml-2 text-xs text-zinc-500 underline hover:text-zinc-800"
+                      >
+                        改名
+                      </button>
+                    </span>
+                  )}
+                </div>
                 <select
                   value={m.job_title || ""}
                   disabled={saving}
