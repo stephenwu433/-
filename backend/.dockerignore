@@ -1,0 +1,12 @@
+# Ignore local/dev artifacts when building the API image
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.pytest_cache/
+*.md
+scripts/verify_*.py
+scripts/mint_dev_token.py
+scripts/neon_bootstrap.sh

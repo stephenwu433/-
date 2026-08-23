@@ -1,0 +1,23 @@
+# PlanFlow — one-click-ish deploy shapes for team use
+# Frontend: Vercel (Root Directory = planflow)
+# Backend: Render (Docker from backend/)
+
+services:
+  - type: web
+    name: planflow-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PLANFLOW_AUTH_MODE
+        value: clerk
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: PLANFLOW_CORS_ORIGINS
+        sync: false
+      # Optional: set after Vercel URL is known, e.g.
+      # https://your-app.vercel.app,http://localhost:3000

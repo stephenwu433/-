@@ -1,0 +1,847 @@
+"use client";
+
+import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+
+import { WorkbenchShell } from "@/components/WorkbenchShell";
+import { generateCycleSchedule } from "@/lib/cycle-schedule-api";
+import {
+  listMembers,
+  updateMemberDisplayName,
+  JOB_TITLE_LABELS,
+  type JobTitle,
+  type TeamMember,
+} from "@/lib/members-api";
+import {
+  addProjectMember,
+  listProjectMembers,
+  removeProjectMember,
+  updateProjectMember,
+  type ProjectMember,
+} from "@/lib/project-members-api";
+import {
+  MEMBER_DAILY_HOURS_MAX,
+  MEMBER_DAILY_HOURS_MIN,
+  clampMemberDailyHours,
+  deleteProject,
+  listTeamProjects,
+  updateProject,
+  type Project,
+  type ProjectStatus,
+} from "@/lib/projects-api";
+import {
+  createTask,
+  deleteTask,
+  listTasks,
+  updateTask,
+  STATUS_LABELS,
+  TASK_STATUSES,
+  type Task,
+  type TaskStatus,
+} from "@/lib/tasks-api";
+import { listMyTeams } from "@/lib/teams-api";
+
+const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  active: "进行中",
+  paused: "已暂停",
+  done: "已完成",
+};
+
+export default function ProjectTasksPage() {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const router = useRouter();
+  const params = useParams<{ teamId: string; projectId: string }>();
+  const teamId = typeof params.teamId === "string" ? params.teamId : "";
+  const projectId = typeof params.projectId === "string" ? params.projectId : "";
+
+  const [project, setProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [title, setTitle] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [addUserId, setAddUserId] = useState("");
+  const [addJobTitle, setAddJobTitle] = useState<JobTitle | "">("");
+  const [error, setError] = useState<string | null>(null);
+
+  const [settingsName, setSettingsName] = useState("");
+  const [settingsDescription, setSettingsDescription] = useState("");
+  const [settingsObjective, setSettingsObjective] = useState("");
+  const [settingsStart, setSettingsStart] = useState("");
+  const [settingsEnd, setSettingsEnd] = useState("");
+  const [settingsOwner, setSettingsOwner] = useState("");
+  const [ownerNameDraft, setOwnerNameDraft] = useState("");
+  const [ownerRenaming, setOwnerRenaming] = useState(false);
+  const [settingsHours, setSettingsHours] = useState("6");
+  const [settingsStatus, setSettingsStatus] = useState<ProjectStatus>("active");
+  const [settingsConfirmed, setSettingsConfirmed] = useState(false);
+
+  const syncSettingsForm = useCallback((p: Project) => {
+    setSettingsName(p.name);
+    setSettingsDescription(p.description ?? "");
+    setSettingsObjective(p.objective ?? "");
+    setSettingsStart(p.planned_start ?? "");
+    setSettingsEnd(p.planned_end ?? "");
+    setSettingsOwner(p.owner_user_id ?? "");
+    setOwnerNameDraft("");
+    setSettingsHours(String(p.member_daily_hours ?? 6));
+    setSettingsStatus(
+      p.status === "paused" || p.status === "done" ? p.status : "active",
+    );
+    setSettingsConfirmed(Boolean(p.plan_confirmed));
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setError(null);
+    const token = await getToken();
+    if (!token) {
+      setError("拿不到登录 token。请重新登录。");
+      return;
+    }
+    const teams = await listMyTeams(token);
+    if (!teams.teams.some((t) => t.id === teamId)) {
+      setError("你不是这个团队的成员。");
+      setProject(null);
+      setTasks([]);
+      return;
+    }
+    const [projectsPayload, tasksPayload, membersPayload, projectMembersPayload] =
+      await Promise.all([
+        listTeamProjects(token, teamId),
+        listTasks(token, teamId, projectId),
+        listMembers(token, teamId),
+        listProjectMembers(token, teamId, projectId),
+      ]);
+    const matched =
+      projectsPayload.projects.find((p) => p.id === projectId) ?? null;
+    setProject(matched);
+    setTasks(tasksPayload.tasks);
+    setTeamMembers(membersPayload.members);
+    setProjectMembers(projectMembersPayload.members);
+    if (matched) {
+      syncSettingsForm(matched);
+      const owner = membersPayload.members.find(
+        (m) => m.user_id === matched.owner_user_id,
+      );
+      setOwnerNameDraft(owner?.display_name || "");
+    } else setError("找不到这个项目。");
+  }, [getToken, teamId, projectId, syncSettingsForm]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !teamId || !projectId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        await refresh();
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, teamId, projectId, refresh]);
+
+  const assignees = useMemo(() => {
+    if (projectMembers.length > 0) return projectMembers;
+    return teamMembers.map((m) => ({
+      user_id: m.user_id,
+      display_name: m.display_name,
+      email: m.email,
+      clerk_user_id: m.clerk_user_id,
+    }));
+  }, [projectMembers, teamMembers]);
+
+  const addableMembers = useMemo(() => {
+    const ids = new Set(projectMembers.map((m) => m.user_id));
+    return teamMembers.filter((m) => !ids.has(m.user_id));
+  }, [teamMembers, projectMembers]);
+
+  async function onCreate(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await createTask(token, teamId, projectId, {
+        title: trimmed,
+        due_date: dueDate || undefined,
+        assignee_user_id: assignee || undefined,
+      });
+      setTitle("");
+      setDueDate("");
+      setAssignee("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onSaveSettings(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = settingsName.trim();
+    if (!trimmed) return;
+    setSettingsSaving(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const hours = clampMemberDailyHours(Number(settingsHours));
+      const updated = await updateProject(token, teamId, projectId, {
+        name: trimmed,
+        description: settingsDescription.trim() || null,
+        objective: settingsObjective.trim() || null,
+        status: settingsStatus,
+        planned_start: settingsStart || null,
+        planned_end: settingsEnd || null,
+        clear_schedule: !settingsStart && !settingsEnd,
+        owner_user_id: settingsOwner || null,
+        clear_owner: !settingsOwner,
+        member_daily_hours: hours,
+        plan_confirmed: settingsConfirmed,
+      });
+      setProject(updated);
+      syncSettingsForm(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  async function onGenerateSchedule() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      // Persist latest settings first so generate uses current name/objective/dates.
+      if (project) {
+        const hours = clampMemberDailyHours(Number(settingsHours));
+        await updateProject(token, teamId, projectId, {
+          name: settingsName.trim() || project.name,
+          description: settingsDescription.trim() || null,
+          objective: settingsObjective.trim() || null,
+          planned_start: settingsStart || null,
+          planned_end: settingsEnd || null,
+          clear_schedule: !settingsStart && !settingsEnd,
+          member_daily_hours: hours,
+        });
+      }
+      await generateCycleSchedule(token, teamId, projectId, {
+        replace_existing: true,
+        seed_mode: "from_requirements",
+        phase_count: 5,
+        requirements_text: settingsObjective.trim() || null,
+        save_requirements_to_project: Boolean(settingsObjective.trim()),
+        create_tasks: true,
+      });
+      router.push(`/teams/${teamId}/projects/${projectId}/schedule`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function onDeleteProject() {
+    if (
+      !window.confirm(
+        `确定删除当前项目「${project?.name || ""}」？此操作不可恢复。`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await deleteProject(token, teamId, projectId);
+      router.push("/portfolio");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setDeleting(false);
+    }
+  }
+
+  async function onStatus(taskId: string, status: TaskStatus) {
+    setBusyId(taskId);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const updated = await updateTask(token, teamId, projectId, taskId, {
+        status,
+      });
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onDelete(taskId: string) {
+    if (!window.confirm("确定删除这个任务？")) return;
+    setBusyId(taskId);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await deleteTask(token, teamId, projectId, taskId);
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onAddMember(e: FormEvent) {
+    e.preventDefault();
+    if (!addUserId) return;
+    setMemberBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await addProjectMember(token, teamId, projectId, {
+        user_id: addUserId,
+        job_title: addJobTitle || null,
+      });
+      setAddUserId("");
+      setAddJobTitle("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMemberBusy(false);
+    }
+  }
+
+  async function onUpdateMemberJob(userId: string, jobTitle: string) {
+    setMemberBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      const updated = await updateProjectMember(token, teamId, projectId, userId, {
+        job_title: jobTitle || null,
+        clear_job_title: !jobTitle,
+      });
+      setProjectMembers((prev) =>
+        prev.map((m) => (m.user_id === updated.user_id ? updated : m)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMemberBusy(false);
+    }
+  }
+
+  async function onRemoveMember(userId: string) {
+    if (!window.confirm("确定移除此项目成员？")) return;
+    setMemberBusy(true);
+    setError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("拿不到登录 token");
+      await removeProjectMember(token, teamId, projectId, userId);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setMemberBusy(false);
+    }
+  }
+
+  function memberLabel(userId: string | null) {
+    if (!userId) return "未指派";
+    const m =
+      projectMembers.find((x) => x.user_id === userId) ||
+      teamMembers.find((x) => x.user_id === userId);
+    return m?.display_name || m?.email || ("clerk_user_id" in (m || {})
+      ? (m as TeamMember | ProjectMember).clerk_user_id
+      : null) || userId.slice(0, 8);
+  }
+
+  function normalizeStatus(status: string): TaskStatus {
+    return (TASK_STATUSES as string[]).includes(status)
+      ? (status as TaskStatus)
+      : "todo";
+  }
+
+  return (
+    <WorkbenchShell
+      teamId={teamId}
+      projectId={projectId}
+      projectName={project?.name}
+    >
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+          项目任务与设置
+        </h1>
+        <p className="mt-2 text-sm text-zinc-600">
+          上方改项目设置与成员；下方管理具体任务。
+        </p>
+
+        {!isLoaded ? (
+          <p className="mt-8 text-sm text-zinc-500">确认登录…</p>
+        ) : !isSignedIn ? (
+          <p className="mt-8 text-sm text-amber-800">
+            请先{" "}
+            <Link href="/sign-in" className="underline">
+              登录
+            </Link>
+            。
+          </p>
+        ) : (
+          <div className="mt-8 space-y-8">
+            {project ? (
+              <div>
+                <p className="text-lg font-medium text-zinc-900">{project.name}</p>
+                <p className="text-xs text-zinc-500">
+                  {project.planned_start || "未设开始"} →{" "}
+                  {project.planned_end || "未设结束"} · {project.status}
+                  {project.plan_confirmed ? " · 计划已确认" : " · 计划未确认"}
+                </p>
+              </div>
+            ) : null}
+
+            {project ? (
+              <form onSubmit={onSaveSettings} className="space-y-3">
+                <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                  项目设置
+                </h2>
+                <input
+                  value={settingsName}
+                  onChange={(e) => setSettingsName(e.target.value)}
+                  placeholder="项目名称"
+                  maxLength={120}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                />
+                <input
+                  value={settingsDescription}
+                  onChange={(e) => setSettingsDescription(e.target.value)}
+                  placeholder="简介（可选）"
+                  maxLength={2000}
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                />
+                <label className="flex flex-col gap-1 text-xs text-zinc-500">
+                  项目目标或项目内容
+                  <textarea
+                    value={settingsObjective}
+                    onChange={(e) => setSettingsObjective(e.target.value)}
+                    placeholder="可选：写下目标、范围或关键内容；也可只填项目名称后直接生成排期"
+                    maxLength={4000}
+                    rows={3}
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                  />
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    计划开始日期
+                    <input
+                      type="date"
+                      value={settingsStart}
+                      onChange={(e) => setSettingsStart(e.target.value)}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    计划结束日期
+                    <input
+                      type="date"
+                      value={settingsEnd}
+                      onChange={(e) => setSettingsEnd(e.target.value)}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    负责人
+                    <select
+                      value={settingsOwner}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSettingsOwner(id);
+                        const m = teamMembers.find((x) => x.user_id === id);
+                        setOwnerNameDraft(m?.display_name || "");
+                      }}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="">未指定</option>
+                      {teamMembers.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.display_name || m.email || m.clerk_user_id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    成员每日可用工时（{MEMBER_DAILY_HOURS_MIN}–{MEMBER_DAILY_HOURS_MAX}）
+                    <input
+                      type="number"
+                      min={MEMBER_DAILY_HOURS_MIN}
+                      max={MEMBER_DAILY_HOURS_MAX}
+                      step={0.5}
+                      value={settingsHours}
+                      onChange={(e) => setSettingsHours(e.target.value)}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                </div>
+                {settingsOwner ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs text-zinc-500">
+                      负责人显示名
+                      <input
+                        value={ownerNameDraft}
+                        onChange={(e) => setOwnerNameDraft(e.target.value)}
+                        placeholder="例如：张三"
+                        maxLength={80}
+                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={
+                        ownerRenaming ||
+                        !ownerNameDraft.trim() ||
+                        settingsSaving
+                      }
+                      onClick={async () => {
+                        setOwnerRenaming(true);
+                        setError(null);
+                        try {
+                          const token = await getToken();
+                          if (!token) throw new Error("拿不到登录 token");
+                          const updated = await updateMemberDisplayName(
+                            token,
+                            teamId,
+                            settingsOwner,
+                            ownerNameDraft.trim(),
+                          );
+                          setTeamMembers((prev) =>
+                            prev.map((x) =>
+                              x.user_id === settingsOwner
+                                ? { ...x, display_name: updated.display_name }
+                                : x,
+                            ),
+                          );
+                          setOwnerNameDraft(updated.display_name || "");
+                        } catch (err) {
+                          setError(
+                            err instanceof Error ? err.message : String(err),
+                          );
+                        } finally {
+                          setOwnerRenaming(false);
+                        }
+                      }}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                    >
+                      {ownerRenaming ? "保存中…" : "保存显示名"}
+                    </button>
+                  </div>
+                ) : null}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    状态
+                    <select
+                      value={settingsStatus}
+                      onChange={(e) =>
+                        setSettingsStatus(e.target.value as ProjectStatus)
+                      }
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="active">{PROJECT_STATUS_LABELS.active}</option>
+                      <option value="paused">{PROJECT_STATUS_LABELS.paused}</option>
+                      <option value="done">{PROJECT_STATUS_LABELS.done}</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 pb-2 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={settingsConfirmed}
+                      onChange={(e) => setSettingsConfirmed(e.target.checked)}
+                    />
+                    计划已确认
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={settingsSaving || !settingsName.trim()}
+                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {settingsSaving ? "保存中…" : "保存设置"}
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3 border-t border-zinc-100 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+                  <button
+                    type="button"
+                    disabled={generating || deleting}
+                    onClick={() => void onGenerateSchedule()}
+                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {generating ? "生成中…" : "生成本项目全周期排期"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={generating || deleting}
+                    onClick={() => void onDeleteProject()}
+                    className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? "删除中…" : "删除当前项目"}
+                  </button>
+                  <Link
+                    href="/teams"
+                    className="text-sm text-zinc-600 underline hover:text-zinc-900"
+                  >
+                    ＋ 再新建一个项目
+                  </Link>
+                </div>
+              </form>
+            ) : null}
+
+            {project ? (
+              <section className="space-y-3">
+                <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                  此项目的成员
+                </h2>
+                <form
+                  onSubmit={onAddMember}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                >
+                  <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    添加成员
+                    <select
+                      value={addUserId}
+                      onChange={(e) => setAddUserId(e.target.value)}
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="">选择团队成员</option>
+                      {addableMembers.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.display_name || m.email || m.clerk_user_id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                    岗位
+                    <select
+                      value={addJobTitle}
+                      onChange={(e) =>
+                        setAddJobTitle(e.target.value as JobTitle | "")
+                      }
+                      className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="">未指定</option>
+                      {(Object.keys(JOB_TITLE_LABELS) as JobTitle[]).map(
+                        (key) => (
+                          <option key={key} value={key}>
+                            {JOB_TITLE_LABELS[key]}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={memberBusy || !addUserId}
+                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                  >
+                    {memberBusy ? "处理中…" : "添加"}
+                  </button>
+                </form>
+
+                {projectMembers.length === 0 ? (
+                  <p className="text-sm text-zinc-500">
+                    还没有项目成员。添加后可用于任务指派。
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-zinc-200 border-t border-b border-zinc-200">
+                    {projectMembers.map((m) => (
+                      <li
+                        key={m.user_id}
+                        className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-zinc-900">
+                            {m.display_name || m.email || m.clerk_user_id}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {m.job_title_label ||
+                              (m.job_title
+                                ? JOB_TITLE_LABELS[m.job_title as JobTitle] ||
+                                  m.job_title
+                                : "未设岗位")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={m.job_title || ""}
+                            disabled={memberBusy}
+                            onChange={(e) =>
+                              void onUpdateMemberJob(m.user_id, e.target.value)
+                            }
+                            className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+                          >
+                            <option value="">未指定</option>
+                            {(Object.keys(JOB_TITLE_LABELS) as JobTitle[]).map(
+                              (key) => (
+                                <option key={key} value={key}>
+                                  {JOB_TITLE_LABELS[key]}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={memberBusy}
+                            onClick={() => void onRemoveMember(m.user_id)}
+                            className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                          >
+                            移除
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ) : null}
+
+            <form onSubmit={onCreate} className="space-y-3">
+              <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                新建任务
+              </h2>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="例如：完成竞品调研"
+                  maxLength={200}
+                  className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-500"
+                />
+                <button
+                  type="submit"
+                  disabled={saving || !title.trim()}
+                  className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+                >
+                  {saving ? "创建中…" : "添加任务"}
+                </button>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  截止日期
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="flex flex-1 flex-col gap-1 text-xs text-zinc-500">
+                  负责人
+                  <select
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900"
+                  >
+                    <option value="">暂不指派</option>
+                    {assignees.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.display_name || m.email || m.clerk_user_id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </form>
+
+            {error ? (
+              <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </p>
+            ) : null}
+
+            <section>
+              <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+                任务列表
+              </h2>
+              {loading ? (
+                <p className="mt-3 text-sm text-zinc-500">加载中…</p>
+              ) : tasks.length === 0 ? (
+                <p className="mt-3 text-sm text-zinc-500">
+                  还没有任务。在上面添加第一条。
+                </p>
+              ) : (
+                <ul className="mt-3 divide-y divide-zinc-200 border-t border-b border-zinc-200">
+                  {tasks.map((task) => (
+                    <li
+                      key={task.id}
+                      className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-zinc-900">
+                          {task.title}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {memberLabel(task.assignee_user_id)}
+                          {task.due_date ? ` · 截止 ${task.due_date}` : ""}
+                          {task.description ? ` · ${task.description}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={normalizeStatus(task.status)}
+                          disabled={busyId === task.id}
+                          onChange={(e) =>
+                            onStatus(task.id, e.target.value as TaskStatus)
+                          }
+                          className="rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+                        >
+                          {TASK_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {STATUS_LABELS[s]}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={busyId === task.id}
+                          onClick={() => onDelete(task.id)}
+                          className="rounded-md border border-zinc-300 px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+      </main>
+    </WorkbenchShell>
+  );
+}
