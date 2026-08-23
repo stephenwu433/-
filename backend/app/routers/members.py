@@ -110,6 +110,10 @@ def update_member(
         else:
             member.job_title = job
 
+    if body.display_name is not None:
+        name = body.display_name.strip()
+        user.display_name = name or None
+
     db.commit()
     return TeamMemberResponse(
         user_id=user.id,

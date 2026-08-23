@@ -142,14 +142,14 @@ function PortfolioPanel() {
         <p className="text-sm text-zinc-500">加载总览…</p>
       ) : stats ? (
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Stat label="进行中项目" value={String(stats.active_projects)} />
-          <Stat label="全部任务" value={String(stats.total_tasks)} />
+          <Stat label="进行中的项目" value={String(stats.active_projects)} />
+          <Stat label="全项目计划任务" value={String(stats.total_tasks)} />
           <Stat label="当日任务" value={String(stats.day_tasks)} />
           <Stat
             label="当日估时(h)"
             value={String(stats.day_task_hours_estimate)}
           />
-          <Stat label="高负荷成员" value={String(stats.high_load_members)} />
+          <Stat label="跨项目负荷偏高" value={String(stats.high_load_members)} />
         </section>
       ) : null}
 

@@ -12,8 +12,8 @@ export default function Home() {
           PlanFlow
         </h1>
         <p className="mt-4 text-base leading-7 text-zinc-600">
-          团队版项目组合与排期协作。先完成注册/登录，确认账号可用后，再接入
-          FastAPI 与 PostgreSQL。
+          团队版项目组合与排期协作：管理项目、全周期排期、每日任务与负荷一览。
+          登录后即可直接使用，无需自行搭建服务。
         </p>
 
         <Show when="signed-out">

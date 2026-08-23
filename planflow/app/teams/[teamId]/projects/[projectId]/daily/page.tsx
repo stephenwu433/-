@@ -8,7 +8,6 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { WorkbenchShell } from "@/components/WorkbenchShell";
 import {
   getDailyTasks,
-  saveDailyFeedback,
   upsertTimeEntry,
   type DailyTaskCard,
   type DailyTasksResponse,
@@ -43,9 +42,6 @@ export default function DailyTasksPage() {
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
-  const [completionPercent, setCompletionPercent] = useState(0);
-  const [dayNote, setDayNote] = useState("");
-  const [savingFeedback, setSavingFeedback] = useState(false);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -62,8 +58,6 @@ export default function DailyTasksPage() {
     }
     const payload = await getDailyTasks(token, teamId, projectId, viewDate);
     setData(payload);
-    setCompletionPercent(payload.completion_percent ?? 0);
-    setDayNote(payload.day_note ?? "");
   }, [getToken, teamId, projectId, viewDate]);
 
   useEffect(() => {
@@ -106,12 +100,18 @@ export default function DailyTasksPage() {
     }
   }
 
-  async function onSaveHours(card: DailyTaskCard, hoursRaw: string, note: string) {
+  async function onSaveTask(
+    card: DailyTaskCard,
+    hoursRaw: string,
+    note: string,
+    completionPercent: number,
+  ) {
     const hours = Number(hoursRaw);
     if (!Number.isFinite(hours) || hours < 0 || hours > 24) {
       setError("工时需在 0–24 之间。");
       return;
     }
+    const pct = Math.min(100, Math.max(0, Math.round(completionPercent)));
     setSavingTaskId(card.task.id);
     setError(null);
     try {
@@ -120,34 +120,14 @@ export default function DailyTasksPage() {
       await upsertTimeEntry(token, teamId, projectId, card.task.id, viewDate, {
         hours,
         note,
+        completion_percent: pct,
+        apply_review_status: pct >= 100,
       });
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSavingTaskId(null);
-    }
-  }
-
-  async function onSaveFeedback(e: FormEvent) {
-    e.preventDefault();
-    setSavingFeedback(true);
-    setError(null);
-    try {
-      const token = await getToken();
-      if (!token) throw new Error("拿不到登录 token");
-      const payload = await saveDailyFeedback(token, teamId, projectId, viewDate, {
-        completion_percent: completionPercent,
-        day_note: dayNote,
-        apply_review_status: true,
-      });
-      setData(payload);
-      setCompletionPercent(payload.completion_percent ?? 0);
-      setDayNote(payload.day_note ?? "");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSavingFeedback(false);
     }
   }
 
@@ -165,7 +145,7 @@ export default function DailyTasksPage() {
           {data?.project_name || "项目"} · 每日任务
         </h1>
         <p className="mt-2 text-sm leading-6 text-zinc-600">
-          查看所选日期的项目任务，填写当日工时，并记录任务总完成度。
+          按任务填写完成度、当日实际工时与进展说明。完成度到 100% 时任务将进入「待验收」。
         </p>
 
         {!isLoaded ? (
@@ -200,51 +180,6 @@ export default function DailyTasksPage() {
                 </p>
               ) : null}
             </div>
-
-            <form
-              onSubmit={onSaveFeedback}
-              className="space-y-3 rounded-md border border-zinc-200 p-4"
-            >
-              <h2 className="text-sm font-medium text-zinc-900">任务总完成度</h2>
-              <label className="flex flex-col gap-2 text-xs text-zinc-500">
-                <span className="flex items-center justify-between">
-                  <span>完成度</span>
-                  <span className="tabular-nums text-sm font-medium text-zinc-900">
-                    {completionPercent}%
-                  </span>
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={completionPercent}
-                  onChange={(e) => setCompletionPercent(Number(e.target.value))}
-                  className="w-full"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-zinc-500">
-                当日备注
-                <textarea
-                  value={dayNote}
-                  onChange={(e) => setDayNote(e.target.value)}
-                  placeholder="今天整体进展、风险或需要同步的事项"
-                  maxLength={4000}
-                  rows={3}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500"
-                />
-              </label>
-              <p className="text-xs text-zinc-500">
-                完成度设为 100% 时，未完成任务将标记为「待验收」。
-              </p>
-              <button
-                type="submit"
-                disabled={savingFeedback}
-                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
-              >
-                {savingFeedback ? "保存中…" : "保存反馈"}
-              </button>
-            </form>
 
             <form onSubmit={onCreateForDay} className="flex flex-col gap-3 sm:flex-row">
               <input
@@ -282,7 +217,7 @@ export default function DailyTasksPage() {
                     key={card.task.id}
                     card={card}
                     saving={savingTaskId === card.task.id}
-                    onSave={onSaveHours}
+                    onSave={onSaveTask}
                   />
                 ))}
               </ul>
@@ -301,18 +236,31 @@ function DailyTaskRow({
 }: {
   card: DailyTaskCard;
   saving: boolean;
-  onSave: (card: DailyTaskCard, hours: string, note: string) => Promise<void>;
+  onSave: (
+    card: DailyTaskCard,
+    hours: string,
+    note: string,
+    completionPercent: number,
+  ) => Promise<void>;
 }) {
   const [hours, setHours] = useState(String(card.my_hours ?? 0));
   const [note, setNote] = useState(card.my_note ?? "");
+  const [completion, setCompletion] = useState(card.my_completion_percent ?? 0);
 
   useEffect(() => {
     setHours(String(card.my_hours ?? 0));
     setNote(card.my_note ?? "");
-  }, [card.my_hours, card.my_note, card.task.id]);
+    setCompletion(card.my_completion_percent ?? 0);
+  }, [
+    card.my_hours,
+    card.my_note,
+    card.my_completion_percent,
+    card.task.id,
+  ]);
 
   const statusKey = card.task.status as TaskStatus;
   const status = STATUS_LABELS[statusKey] || card.task.status;
+  const planned = card.planned_hours ?? card.task.estimated_hours ?? 0;
 
   return (
     <li className="rounded-md border border-zinc-200 p-4">
@@ -322,18 +270,39 @@ function DailyTaskRow({
           <p className="mt-1 text-xs text-zinc-500">
             {card.assignee_display_name || "未指派"} · {status}
             {card.task.due_date ? ` · 截止 ${card.task.due_date}` : ""}
+            {planned > 0 ? ` · 计划 ${planned}h` : ""}
           </p>
         </div>
         <p className="text-xs text-zinc-500">合计 {card.total_hours}h</p>
       </div>
 
-      <div className="mt-4 border-t border-zinc-100 pt-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          当日工时填报
-        </p>
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="mt-4 space-y-3 border-t border-zinc-100 pt-3">
+        <label className="flex flex-col gap-2 text-xs text-zinc-500">
+          <span className="flex items-center justify-between">
+            <span>任务完成度</span>
+            <span className="tabular-nums text-sm font-medium text-zinc-900">
+              {completion}%
+            </span>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={completion}
+            onChange={(e) => setCompletion(Number(e.target.value))}
+            className="w-full"
+          />
+          {completion >= 100 ? (
+            <span className="text-[11px] text-amber-800">
+              保存后将标记为「待验收」
+            </span>
+          ) : null}
+        </label>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex w-28 flex-col gap-1 text-xs text-zinc-500">
-            小时
+            当日实际工时
             <input
               type="number"
               min={0}
@@ -345,7 +314,7 @@ function DailyTaskRow({
             />
           </label>
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-zinc-500">
-            说明（可选）
+            当日进展说明
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -357,10 +326,10 @@ function DailyTaskRow({
           <button
             type="button"
             disabled={saving}
-            onClick={() => void onSave(card, hours, note)}
+            onClick={() => void onSave(card, hours, note, completion)}
             className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
           >
-            {saving ? "保存中…" : "保存工时"}
+            {saving ? "保存中…" : "保存"}
           </button>
         </div>
       </div>

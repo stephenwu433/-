@@ -9,10 +9,6 @@ export type JobTitle =
   | "project_manager"
   | "pm"
   | "designer"
-  | "frontend"
-  | "backend"
-  | "fullstack"
-  | "qa"
   | "ops"
   | "other";
 
@@ -20,10 +16,6 @@ export const JOB_TITLE_LABELS: Record<JobTitle, string> = {
   project_manager: "项目经理",
   pm: "产品经理",
   designer: "设计师",
-  frontend: "前端工程师",
-  backend: "后端工程师",
-  fullstack: "全栈工程师",
-  qa: "测试工程师",
   ops: "运营",
   other: "其他",
 };
@@ -78,6 +70,30 @@ export function updateMemberJobTitle(
         ? { job_title: jobTitle }
         : { clear_job_title: true },
     ),
+  });
+}
+
+export function updateMemberDisplayName(
+  token: string,
+  teamId: string,
+  userId: string,
+  displayName: string,
+) {
+  return apiFetch<TeamMember>(`/teams/${teamId}/members/${userId}`, token, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export function updateMyDisplayName(token: string, displayName: string) {
+  return apiFetch<{
+    id: string;
+    clerk_user_id: string;
+    email: string | null;
+    display_name: string | null;
+  }>("/me", token, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName }),
   });
 }
 

@@ -8,7 +8,6 @@ import { createTeam, listMyTeams, type Team } from "@/lib/teams-api";
 
 /**
  * 「我的团队」——登录后才能用。
- * 步骤：拿 Clerk token → 调后端 /teams → 显示列表 / 创建团队。
  */
 export default function TeamsPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -24,8 +23,7 @@ export default function TeamsPage() {
         我的团队
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        这里会调用后端 <code className="text-zinc-800">/teams</code>
-        ：先校验你的登录身份，再创建或查看属于你的团队。
+        创建或加入团队后，即可在团队下管理项目、排期与每日任务。
       </p>
 
       {!isLoaded ? (
@@ -138,10 +136,6 @@ function TeamsPanel() {
       {error ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-          <span className="mt-2 block text-red-700/80">
-            提示：后端需配置相同的 Clerk Publishable Key，且
-            PLANFLOW_AUTH_MODE=clerk（不要用 DEV 模式联调真登录）。
-          </span>
         </p>
       ) : null}
 

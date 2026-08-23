@@ -25,6 +25,20 @@ export type ProjectListResponse = {
   projects: Project[];
 };
 
+/** Member daily available hours; backend accepts 1–12. */
+export const MEMBER_DAILY_HOURS_MIN = 1;
+export const MEMBER_DAILY_HOURS_MAX = 12;
+export const MEMBER_DAILY_HOURS_DEFAULT = 6;
+
+export function clampMemberDailyHours(hours: number | undefined | null): number {
+  const n = Number(hours);
+  if (!Number.isFinite(n)) return MEMBER_DAILY_HOURS_DEFAULT;
+  return Math.min(
+    MEMBER_DAILY_HOURS_MAX,
+    Math.max(MEMBER_DAILY_HOURS_MIN, n),
+  );
+}
+
 export type CreateProjectInput = {
   name: string;
   description?: string;
@@ -32,6 +46,7 @@ export type CreateProjectInput = {
   planned_start?: string;
   planned_end?: string;
   owner_user_id?: string;
+  /** Daily available hours per member (1–12). Default 6. */
   member_daily_hours?: number;
 };
 
@@ -45,6 +60,7 @@ export type UpdateProjectInput = {
   clear_schedule?: boolean;
   owner_user_id?: string | null;
   clear_owner?: boolean;
+  /** Daily available hours per member (1–12). */
   member_daily_hours?: number;
   plan_confirmed?: boolean;
 };
@@ -120,7 +136,9 @@ export function createProject(
       planned_start: body.planned_start || null,
       planned_end: body.planned_end || null,
       owner_user_id: body.owner_user_id || null,
-      member_daily_hours: body.member_daily_hours ?? 6,
+      member_daily_hours: clampMemberDailyHours(
+        body.member_daily_hours ?? MEMBER_DAILY_HOURS_DEFAULT,
+      ),
     }),
   });
 }
@@ -131,10 +149,40 @@ export function updateProject(
   projectId: string,
   input: UpdateProjectInput,
 ): Promise<Project> {
+  const body: UpdateProjectInput = { ...input };
+  if (body.member_daily_hours != null) {
+    body.member_daily_hours = clampMemberDailyHours(body.member_daily_hours);
+  }
   return apiFetch<Project>(`/teams/${teamId}/projects/${projectId}`, token, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
+}
+
+export async function deleteProject(
+  token: string,
+  teamId: string,
+  projectId: string,
+): Promise<void> {
+  const { getApiBaseUrl } = await import("./api");
+  const res = await fetch(
+    `${getApiBaseUrl()}/teams/${teamId}/projects/${projectId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  if (!res.ok && res.status !== 204) {
+    let detail = res.statusText;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (typeof body.detail === "string") detail = body.detail;
+      else if (body.detail != null) detail = JSON.stringify(body.detail);
+    } catch {
+      // keep statusText
+    }
+    throw new Error(`API ${res.status}: ${detail}`);
+  }
 }
 
 export function updateProjectStatus(

@@ -46,8 +46,7 @@ export default function WorkloadPage() {
         跨项目成员工作量
       </h1>
       <p className="mt-2 text-sm leading-6 text-zinc-600">
-        按日汇总你所在团队里各成员的未完成到期任务与已填工时；超过当日容量（约
-        6h）视为超负荷。
+        按日汇总你所在团队里各成员的计划工时与已填工时；超过当日容量视为负荷偏高。
       </p>
 
       {!isLoaded ? (
@@ -163,6 +162,13 @@ function WorkloadPanel() {
 }
 
 function MemberCard({ member }: { member: WorkloadMember }) {
+  const loadLabel =
+    member.load_label || (member.overloaded ? "负荷偏高" : "负荷正常");
+  const actionHint =
+    member.action_hint ||
+    (member.overloaded ? "建议调整排期" : "可继续执行");
+  const planned = member.planned_hours ?? 0;
+
   return (
     <li className="rounded-md border border-zinc-200 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -181,22 +187,44 @@ function MemberCard({ member }: { member: WorkloadMember }) {
           </div>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-semibold tabular-nums text-zinc-900">
+          <span
+            className={[
+              "inline-block rounded px-2 py-0.5 text-xs font-medium",
+              member.overloaded
+                ? "bg-red-100 text-red-800"
+                : "bg-emerald-100 text-emerald-800",
+            ].join(" ")}
+          >
+            {loadLabel}
+          </span>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900">
             {member.load_ratio.toFixed(1)}x
           </p>
           <p className="text-xs text-zinc-500">相对日容量</p>
         </div>
       </div>
 
-      {member.overloaded ? (
-        <p className="mt-3 text-sm text-red-700">
-          已填 {member.logged_hours}h，超过当日容量约 {member.capacity_hours}h
+      <div className="mt-3 space-y-1">
+        <p className="text-sm text-zinc-900">
+          所有项目当天合计{" "}
+          <span className="font-semibold tabular-nums">{planned}h</span>
+          <span className="text-xs font-normal text-zinc-500">
+            {" "}
+            （日容量约 {member.capacity_hours}h）
+          </span>
         </p>
-      ) : (
-        <p className="mt-3 text-sm text-zinc-600">
-          已填 {member.logged_hours}h / 日容量约 {member.capacity_hours}h
+        <p className="text-xs text-zinc-500">
+          已填工时 {member.logged_hours}h
         </p>
-      )}
+        <p
+          className={[
+            "text-sm",
+            member.overloaded ? "text-red-700" : "text-zinc-600",
+          ].join(" ")}
+        >
+          {actionHint}
+        </p>
+      </div>
 
       <ul className="mt-3 space-y-1 border-t border-zinc-100 pt-3">
         {member.projects.map((p) => (
@@ -212,7 +240,8 @@ function MemberCard({ member }: { member: WorkloadMember }) {
               {p.team_name ? ` · ${p.team_name}` : ""}
             </Link>
             <span className="shrink-0 tabular-nums">
-              {p.due_task_count} 任务 · {p.logged_hours}h
+              {p.due_task_count} 任务 · 计划 {p.planned_hours ?? 0}h · 已填{" "}
+              {p.logged_hours}h
             </span>
           </li>
         ))}

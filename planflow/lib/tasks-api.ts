@@ -32,6 +32,8 @@ export type Task = {
   assignee_user_id: string | null;
   due_date: string | null;
   sort_order: number;
+  /** Estimated / planned hours for this task. */
+  estimated_hours: number;
   created_at: string;
 };
 

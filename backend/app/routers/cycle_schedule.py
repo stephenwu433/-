@@ -256,19 +256,25 @@ def _resolve_phase_names(
         names = [n.strip() for n in opts.phase_names if n and n.strip()]
         if names:
             return names
+    # Reference MVP: always the fixed five full-cycle phases.
     if seed_mode == "from_requirements":
-        pipeline = _pipeline_steps_for_jobs(available_jobs or [])
-        # Unique phase names in pipeline order
-        names: list[str] = []
-        for phase_name, _prefix, _job in pipeline:
-            if phase_name not in names:
-                names.append(phase_name)
-        return names or ["目标与需求", "推进落地", "交付复盘"]
+        return list(DEFAULT_PHASE_NAMES)
     count = opts.phase_count
     names = list(DEFAULT_PHASE_NAMES[:count])
     while len(names) < count:
         names.append(f"阶段 {len(names) + 1}")
     return names
+
+
+# Map role-pipeline step names onto the fixed five reference phases.
+_PIPELINE_TO_FIXED_PHASE = {
+    "目标与需求": 0,
+    "方案设计": 1,
+    "开发实现": 2,
+    "推进落地": 2,
+    "验收测试": 3,
+    "交付复盘": 4,
+}
 
 
 def _hours_for_phase_item(
@@ -309,6 +315,7 @@ def _add_work_item(
             assignee_user_id=assignee_user_id,
             due_date=phase.planned_end,
             sort_order=(max_order[0] + 1) if max_order else 0,
+            estimated_hours=float(estimated_hours or 0.0),
             created_by_user_id=created_by_user_id,
         )
         db.add(task)
@@ -336,10 +343,6 @@ JOB_TITLE_LABELS_ZH = {
     "project_manager": "项目经理",
     "pm": "产品经理",
     "designer": "设计师",
-    "frontend": "前端工程师",
-    "backend": "后端工程师",
-    "fullstack": "全栈工程师",
-    "qa": "测试工程师",
     "ops": "运营",
     "other": "其他",
 }
@@ -374,7 +377,7 @@ def _project_job_titles(
 def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None]]:
     """Build (phase_name, title_prefix, target_job) from jobs that actually exist.
 
-    Not every team has design/frontend/backend — only include steps the roster can cover.
+    Selectable roles are pm / project_manager / designer / ops / other — no eng/qa titles.
     """
     job_set = set(jobs)
     steps: list[tuple[str, str, str | None]] = []
@@ -385,21 +388,12 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
                 return c
         return jobs[0] if jobs else None
 
-    # 1) Goals / requirements — prefer pm / project_manager
+    # 1) Goals / requirements
     steps.append(
         (
             "目标与需求",
             "澄清目标",
-            pick(
-                "pm",
-                "project_manager",
-                "fullstack",
-                "frontend",
-                "backend",
-                "ops",
-                "qa",
-                "designer",
-            ),
+            pick("pm", "project_manager", "ops", "designer", "other"),
         )
     )
 
@@ -407,29 +401,13 @@ def _pipeline_steps_for_jobs(jobs: list[str]) -> list[tuple[str, str, str | None
     if "designer" in job_set:
         steps.append(("方案设计", "设计方案", "designer"))
 
-    # 3) Build — only for engineering roles that exist
-    eng = [j for j in ("fullstack", "frontend", "backend") if j in job_set]
-    if len(eng) == 1:
-        label = JOB_TITLE_LABELS_ZH.get(eng[0], eng[0])
-        steps.append(("开发实现", f"{label}实现", eng[0]))
-    elif len(eng) > 1:
-        for j in eng:
-            label = JOB_TITLE_LABELS_ZH.get(j, j)
-            steps.append(("开发实现", f"{label}实现", j))
-    elif job_set:
-        owner_job = pick("ops", "pm", "qa", "designer")
-        label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
-        steps.append(("推进落地", f"{label}推进", owner_job))
-    else:
-        # No job titles configured — keep a generic execution step for goals
-        steps.append(("推进落地", "推进落地", None))
+    # 3) Execution — whoever is on the roster (no frontend/backend titles)
+    owner_job = pick("ops", "pm", "project_manager", "designer", "other")
+    label = JOB_TITLE_LABELS_ZH.get(owner_job or "", "执行")
+    steps.append(("推进落地", f"{label}推进", owner_job))
 
-    # 4) QA — only if qa exists
-    if "qa" in job_set:
-        steps.append(("验收测试", "验收确认", "qa"))
-
-    # 5) Delivery
-    deliver = pick("ops", "pm", "fullstack", "backend", "frontend", "qa", "designer")
+    # 4) Delivery / review
+    deliver = pick("ops", "pm", "project_manager", "designer", "other")
     steps.append(("交付复盘", "交付收尾", deliver))
     return steps
 
@@ -447,15 +425,18 @@ def _seed_from_requirements(
     created_by_user_id: uuid.UUID,
     available_jobs: list[str] | None = None,
 ) -> int:
-    """Build plan from requirements using only steps that match real team jobs."""
+    """Build plan from requirements into the fixed five reference phases."""
     jobs = available_jobs if available_jobs is not None else _team_job_titles(db, team_id=team_id)
     pipeline = _pipeline_steps_for_jobs(jobs)
 
-    # Map phase_name -> ProjectPhase (phases already created to match pipeline names)
-    by_name = {p.name: p for p in phases}
+    def phase_for(pipeline_name: str) -> ProjectPhase:
+        idx = _PIPELINE_TO_FIXED_PHASE.get(pipeline_name, 0)
+        idx = min(max(idx, 0), len(phases) - 1)
+        return phases[idx]
+
     created = 0
 
-    # Kickoff always on first phase
+    # Kickoff always on first fixed phase
     first_phase = phases[0]
     planner = pipeline[0][2] if pipeline else None
     kickoff = [
@@ -481,7 +462,7 @@ def _seed_from_requirements(
 
     for req_index, req in enumerate(requirements):
         for phase_name, prefix, _target_job in pipeline:
-            phase = by_name.get(phase_name) or first_phase
+            phase = phase_for(phase_name)
             weight = 0.45 if "实现" in prefix or "推进" in prefix else 0.28
             _add_work_item(
                 db,
@@ -599,13 +580,8 @@ def generate_cycle_schedule(
         if not requirements:
             requirements = _parse_requirements(project.objective)
         if not requirements:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "请先填写需求（每行一条），或在项目设置里写好目标说明，"
-                    "再生成全周期排期。"
-                ),
-            )
+            # Reference settings CTA can generate from project name/dates alone.
+            requirements = [project.name.strip() or "本项目"]
         if opts.save_requirements_to_project and opts.requirements_text:
             cleaned = opts.requirements_text.strip()
             if cleaned:
@@ -717,7 +693,7 @@ def generate_cycle_schedule(
         project_id=project.id,
         type="cycle_schedule_generated",
         category="周期",
-        title="全局周期排期已生成",
+        title="全周期排期已生成",
         body=f"「{project.name}」已生成 {count} 个阶段（模式：{seed_mode}）{work_item_hint}。",
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,
@@ -1275,6 +1251,7 @@ def expand_cycle_schedule_to_daily(
                         task.due_date = day
                         task.title = item.title
                         task.assignee_user_id = chunk_assignee
+                        task.estimated_hours = float(chunk_hours)
                         task_id = task.id
                         updated_tasks += 1
                     else:
@@ -1297,6 +1274,7 @@ def expand_cycle_schedule_to_daily(
                         assignee_user_id=chunk_assignee,
                         due_date=day,
                         sort_order=(max_order[0] + 1) if max_order else 0,
+                        estimated_hours=float(chunk_hours),
                         created_by_user_id=current_user.id,
                     )
                     db.add(task)
@@ -1454,59 +1432,50 @@ def _iter_days(start: date, end: date, *, weekdays_only: bool) -> list[date]:
 
 def _infer_job_from_title(title: str) -> str:
     """Map work-item title to a preferred job_title bucket."""
-    # Explicit prefixes produced by role-aware seeding
     if title.startswith("设计方案") or "设计方案：" in title:
         return "designer"
-    if title.startswith("前端实现") or "前端实现：" in title:
-        return "frontend"
-    if title.startswith("后端实现") or "后端实现：" in title:
-        return "backend"
-    if title.startswith("全栈实现") or "全栈实现：" in title:
-        return "fullstack"
-    if title.startswith("验收确认") or "验收确认：" in title:
-        return "qa"
     if title.startswith("交付收尾") or "交付收尾：" in title or "交付核对" in title:
         return "ops"
     if title.startswith("澄清目标") or "澄清目标：" in title:
         return "pm"
     if "运维推进" in title or title.startswith("运维"):
         return "ops"
-    if "产品推进" in title:
+    if "产品推进" in title or "项目经理推进" in title:
         return "pm"
-    if any(k in title for k in ("高保真", "交互", "视觉", "UI", "UX")):
+    if any(k in title for k in ("高保真", "交互", "视觉", "UI", "UX", "设计")):
         return "designer"
-    if any(k in title for k in ("测试", "联调", "QA", "质量", "验收")):
-        return "qa"
-    if any(k in title for k in ("上线", "发布", "运维", "部署")):
+    if any(k in title for k in ("上线", "发布", "运维", "部署", "运营")):
         return "ops"
-    if "前端" in title or "页面" in title:
-        return "frontend"
-    if "后端" in title or "接口" in title or "API" in title:
-        return "backend"
-    if "全栈" in title or "开发实现" in title or "实现：" in title:
-        return "fullstack"
-    if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品")):
+    # Legacy eng/qa titles in old work items → fold into other/ops/pm
+    if any(k in title for k in ("前端", "后端", "全栈", "测试", "联调", "QA", "实现")):
+        return "other"
+    if any(k in title for k in ("目标", "需求", "干系人", "复盘", "产品", "项目")):
         return "pm"
     return "pm"
 
 
 def _job_fallback_chain(job: str, *, available: set[str]) -> list[str]:
     """Prefer the requested job, then nearby roles that actually exist on the team."""
+    # Legacy frontend/backend/qa values may still exist in DB; treat as "other".
+    legacy = {"frontend", "backend", "qa", "fullstack"}
+    normalized = "other" if job in legacy else job
     chains = {
-        "pm": ["pm", "ops", "fullstack", "frontend", "backend", "qa", "designer"],
-        "designer": ["designer", "frontend", "pm", "fullstack"],
-        "frontend": ["frontend", "fullstack", "backend", "designer", "pm"],
-        "backend": ["backend", "fullstack", "frontend", "ops", "pm"],
-        "fullstack": ["fullstack", "frontend", "backend", "pm"],
-        "qa": ["qa", "backend", "fullstack", "pm"],
-        "ops": ["ops", "backend", "fullstack", "pm"],
+        "pm": ["pm", "project_manager", "ops", "designer", "other"],
+        "project_manager": ["project_manager", "pm", "ops", "designer", "other"],
+        "designer": ["designer", "pm", "ops", "other"],
+        "ops": ["ops", "pm", "project_manager", "other"],
+        "other": ["other", "pm", "ops", "designer"],
     }
-    ordered = chains.get(job, ["pm", "fullstack", "frontend", "backend", "qa", "ops", "designer"])
+    ordered = chains.get(normalized, ["pm", "ops", "designer", "other"])
     if available:
-        filtered = [j for j in ordered if j in available]
+        # Allow legacy DB titles to still receive work if present
+        expanded_available = set(available)
+        for leg in legacy:
+            if leg in available:
+                expanded_available.add("other")
+        filtered = [j for j in ordered if j in expanded_available]
         if filtered:
             return filtered
-        # No overlap — just use whatever jobs the team has
         return list(available)
     return ordered
 
@@ -1615,7 +1584,7 @@ def confirm_cycle_schedule(
         project_id=project.id,
         type="cycle_schedule_confirmed",
         category="周期",
-        title="全局周期计划已确认",
+        title="全周期计划已确认",
         body=f"「{project.name}」的全周期计划已确认，可按阶段安排当日工作。",
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,

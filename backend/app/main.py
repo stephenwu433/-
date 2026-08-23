@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.auth import auth_status, get_current_user
 from app.cors import cors_allow_origins
-from app.db import get_database_url, ping_database, run_smoke_test
+from app.db import get_database_url, get_db, ping_database, run_smoke_test
 from app.models import User
 from app.routers import (
     cycle_schedule,
@@ -20,12 +20,13 @@ from app.routers import (
     teams,
     workload,
 )
-from app.schemas import MeResponse
+from app.schemas import MeResponse, MeUpdateRequest
+from sqlalchemy.orm import Session
 
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
-    version="0.14.0",
+    version="0.15.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
@@ -102,6 +103,26 @@ def db_smoke_test(body: SmokeTestRequest | None = None):
 @app.get("/me", response_model=MeResponse)
 def me(current_user: User = Depends(get_current_user)) -> MeResponse:
     """返回当前登录用户在我们库里的镜像记录（需要 Bearer JWT）。"""
+    return MeResponse(
+        id=current_user.id,
+        clerk_user_id=current_user.clerk_user_id,
+        email=current_user.email,
+        display_name=current_user.display_name,
+    )
+
+
+@app.patch("/me", response_model=MeResponse)
+def update_me(
+    body: MeUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MeResponse:
+    """更新当前用户显示名（项目负责人下拉等处展示）。"""
+    if body.display_name is not None:
+        name = body.display_name.strip()
+        current_user.display_name = name or None
+        db.commit()
+        db.refresh(current_user)
     return MeResponse(
         id=current_user.id,
         clerk_user_id=current_user.clerk_user_id,

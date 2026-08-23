@@ -80,7 +80,7 @@ def main() -> int:
         client.patch(
             f"/teams/{team_id}/members/{member_id}",
             headers=owner,
-            json={"job_title": "frontend"},
+            json={"job_title": "designer"},
         ).raise_for_status()
 
         project = client.post(
@@ -99,7 +99,7 @@ def main() -> int:
         client.post(
             f"/teams/{team_id}/projects/{project_id}/members",
             headers=owner,
-            json={"user_id": member_id, "job_title": "frontend"},
+            json={"user_id": member_id, "job_title": "designer"},
         ).raise_for_status()
 
         empty = client.get(
@@ -177,7 +177,7 @@ def main() -> int:
         if by_id[owner_id]["task_count"] != 1 or by_id[member_id]["task_count"] != 1:
             print("ERROR: unexpected per-member counts", by_id, file=sys.stderr)
             return 1
-        if by_id[member_id].get("job_title") != "frontend":
+        if by_id[member_id].get("job_title") != "designer":
             print("ERROR: job_title missing", by_id[member_id], file=sys.stderr)
             return 1
         print("grouped board OK")

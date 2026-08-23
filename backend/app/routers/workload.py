@@ -1,7 +1,7 @@
 """Cross-project member workload for the current user's teams (day scope).
 
-Aligned with reference MVP: same person across projects — sum that day's hours;
-overload when logged hours exceed the project's daily capacity (default 6h).
+Aligned with reference MVP: sum that day's planned task hours across projects;
+overload when planned hours exceed the project's daily capacity (default 6h).
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def get_workload(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WorkloadResponse:
-    """Aggregate due tasks + logged hours by member across my teams for one day."""
+    """Aggregate planned due-task hours + logged hours by member for one day."""
     day = view_date or date.today()
 
     team_ids = [
@@ -87,6 +87,7 @@ def get_workload(
     )
 
     slice_due: dict[tuple[uuid.UUID, uuid.UUID], int] = defaultdict(int)
+    slice_planned: dict[tuple[uuid.UUID, uuid.UUID], float] = defaultdict(float)
     slice_hours: dict[tuple[uuid.UUID, uuid.UUID], float] = defaultdict(float)
     user_ids: set[uuid.UUID] = set()
 
@@ -96,6 +97,9 @@ def get_workload(
             continue
         user_ids.add(uid)
         slice_due[(uid, task.project_id)] += 1
+        # Reference uses planned daily estimate; fallback 1h if unset.
+        est = float(task.estimated_hours or 0.0)
+        slice_planned[(uid, task.project_id)] += est if est > 0 else 1.0
 
     for entry in entries:
         user_ids.add(entry.user_id)
@@ -113,6 +117,7 @@ def get_workload(
 
         slices: list[WorkloadProjectSlice] = []
         due_total = 0
+        planned_total = 0.0
         hours_total = 0.0
         daily_caps: list[float] = []
         for pid in sorted(
@@ -123,10 +128,12 @@ def get_workload(
                 continue
             team = teams.get(project.team_id)
             due_n = int(slice_due.get((uid, pid), 0))
+            planned_n = float(slice_planned.get((uid, pid), 0.0))
             hours_n = float(slice_hours.get((uid, pid), 0.0))
             daily = float(project.member_daily_hours or 6.0)
             daily_caps.append(daily)
             due_total += due_n
+            planned_total += planned_n
             hours_total += hours_n
             slices.append(
                 WorkloadProjectSlice(
@@ -135,18 +142,17 @@ def get_workload(
                     project_name=project.name,
                     team_name=team.name if team else "",
                     due_task_count=due_n,
+                    planned_hours=round(planned_n, 1),
                     logged_hours=round(hours_n, 1),
                     member_daily_hours=daily,
                 )
             )
 
-        # Reference: capacity is one day's available hours (use max across touched
-        # projects so a person isn't marked overloaded just for joining a 4h project
-        # while also on a 6h project — match “每日 6 小时” default).
         capacity = round(max(daily_caps) if daily_caps else 6.0, 1)
-        load_ratio = round(hours_total / capacity, 2) if capacity > 0 else 0.0
-        # Overload: day's logged hours exceed daily capacity (reference: >6h).
-        overloaded = hours_total > capacity
+        # Reference overload: day's planned hours exceed daily capacity (>6).
+        load_basis = planned_total if planned_total > 0 else hours_total
+        load_ratio = round(load_basis / capacity, 2) if capacity > 0 else 0.0
+        overloaded = load_basis > capacity
 
         cards.append(
             WorkloadMemberCard(
@@ -154,11 +160,14 @@ def get_workload(
                 display_name=display.get(uid, str(uid)[:8]),
                 project_count=len(project_ids),
                 due_task_count=due_total,
+                planned_hours=round(planned_total, 1),
                 logged_hours=round(hours_total, 1),
                 capacity_hours=capacity,
                 load_ratio=load_ratio,
                 projects_per_day=float(len(project_ids)),
                 overloaded=overloaded,
+                load_label="负荷偏高" if overloaded else "负荷正常",
+                action_hint="建议调整排期" if overloaded else "可继续执行",
                 projects=slices,
             )
         )

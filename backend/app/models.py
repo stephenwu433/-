@@ -76,7 +76,7 @@ class TeamMember(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[str] = mapped_column(String, nullable=False, default="owner")
-    # Business position for scheduling, e.g. pm / designer / frontend / backend / qa / ops
+    # Business position for scheduling, e.g. pm / designer / ops / other
     job_title: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -263,6 +263,7 @@ class Task(Base):
     )
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    estimated_hours: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
@@ -301,6 +302,7 @@ class TaskTimeEntry(Base):
     work_date: Mapped[date] = mapped_column(Date, nullable=False)
     hours: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    completion_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
