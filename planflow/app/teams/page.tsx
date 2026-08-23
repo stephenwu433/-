@@ -8,7 +8,6 @@ import { createTeam, listMyTeams, type Team } from "@/lib/teams-api";
 
 /**
  * 「我的团队」——登录后才能用。
- * 步骤：拿 Clerk token → 调后端 /teams → 显示列表 / 创建团队。
  */
 export default function TeamsPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -137,10 +136,6 @@ function TeamsPanel() {
       {error ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
-          <span className="mt-2 block text-red-700/80">
-            提示：后端需配置相同的 Clerk Publishable Key，且
-            PLANFLOW_AUTH_MODE=clerk（不要用 DEV 模式联调真登录）。
-          </span>
         </p>
       ) : null}
 
