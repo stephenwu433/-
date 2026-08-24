@@ -9,6 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.ai_schedule import (
+    AISchedulePlan,
+    ai_configured,
+    analyze_requirements_to_schedule,
+)
 from app.db import get_db
 from app.membership import require_team_membership
 from app.models import Notification, PhaseWorkItem, Project, ProjectPhase, Task, TeamMember, User
@@ -182,6 +187,8 @@ def _build_schedule_response(
         work_item_count=len(items),
         linked_task_count=linked,
         phases=phase_payloads,
+        ai_analysis=getattr(project, "schedule_ai_analysis", None),
+        generation_mode=getattr(project, "schedule_generation_mode", None),
     )
 
 
@@ -502,6 +509,65 @@ def _seed_from_requirements(
     return created
 
 
+def _first_user_for_job(
+    db: Session, *, team_id: uuid.UUID, job: str | None, default: uuid.UUID
+) -> uuid.UUID:
+    if not job:
+        return default
+    row = (
+        db.query(TeamMember.user_id)
+        .filter(
+            TeamMember.team_id == team_id,
+            TeamMember.job_title == job,
+        )
+        .order_by(TeamMember.created_at.asc())
+        .first()
+    )
+    return row[0] if row else default
+
+
+def _seed_from_ai_plan(
+    db: Session,
+    *,
+    team_id: uuid.UUID,
+    project: Project,
+    phases: list[ProjectPhase],
+    plan: AISchedulePlan,
+    default_assignee: uuid.UUID,
+    create_tasks: bool,
+    created_by_user_id: uuid.UUID,
+) -> int:
+    """Materialize an AISchedulePlan into phase work items / tasks."""
+    phase_by_name = {p.name: p for p in phases}
+    created = 0
+    for ai_phase in plan.phases:
+        phase = phase_by_name.get(ai_phase.name)
+        if phase is None:
+            continue
+        for index, item in enumerate(ai_phase.work_items):
+            assignee = _first_user_for_job(
+                db,
+                team_id=team_id,
+                job=item.suggested_job,
+                default=default_assignee,
+            )
+            _add_work_item(
+                db,
+                team_id=team_id,
+                project=project,
+                phase=phase,
+                title=item.title[:200],
+                assignee_user_id=assignee,
+                sort_order=index,
+                estimated_hours=float(item.estimated_hours),
+                create_task=create_tasks,
+                created_by_user_id=created_by_user_id,
+            )
+            created += 1
+    db.flush()
+    return created
+
+
 def _clear_schedule(db: Session, project_id: uuid.UUID) -> None:
     db.query(PhaseWorkItem).filter(PhaseWorkItem.project_id == project_id).delete()
     db.query(ProjectPhase).filter(ProjectPhase.project_id == project_id).delete()
@@ -564,18 +630,31 @@ def generate_cycle_schedule(
         "from_tasks",
         "phases_only",
         "placeholders",
+        "ai_analyze",
     }:
         raise HTTPException(
             status_code=400,
             detail=(
-                "seed_mode must be from_requirements, from_tasks, "
+                "seed_mode must be from_requirements, ai_analyze, from_tasks, "
                 "phases_only, or placeholders"
+            ),
+        )
+
+    want_ai = seed_mode == "ai_analyze" or (
+        seed_mode == "from_requirements" and bool(opts.use_ai)
+    )
+    if want_ai and not ai_configured():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "AI 排期未配置。请在后端环境变量设置 OPENAI_API_KEY "
+                "（或 PLANFLOW_AI_API_KEY），可选 PLANFLOW_AI_BASE_URL / PLANFLOW_AI_MODEL。"
             ),
         )
 
     requirements: list[str] = []
     available_jobs: list[str] = []
-    if seed_mode == "from_requirements":
+    if seed_mode in {"from_requirements", "ai_analyze"}:
         requirements = _parse_requirements(opts.requirements_text)
         if not requirements:
             requirements = _parse_requirements(project.objective)
@@ -604,8 +683,14 @@ def generate_cycle_schedule(
     if existing and opts.replace_existing:
         _clear_schedule(db, project.id)
 
+    # Fixed five phases for both rule-based and AI analyze modes.
+    resolve_mode = (
+        "from_requirements"
+        if seed_mode in {"from_requirements", "ai_analyze"}
+        else seed_mode
+    )
     names = _resolve_phase_names(
-        opts, seed_mode=seed_mode, available_jobs=available_jobs
+        opts, seed_mode=resolve_mode, available_jobs=available_jobs
     )
     count = len(names)
     segments = _split_range(project.planned_start, project.planned_end, count)
@@ -644,7 +729,38 @@ def generate_cycle_schedule(
             )
 
     work_item_hint = ""
-    if seed_mode == "from_requirements":
+    ai_analysis: str | None = None
+    generation_mode = seed_mode
+    if want_ai:
+        try:
+            plan = analyze_requirements_to_schedule(
+                project_name=project.name,
+                objective=project.objective,
+                requirements=requirements,
+                planned_start=project.planned_start.isoformat(),
+                planned_end=project.planned_end.isoformat(),
+                member_daily_hours=daily,
+                available_jobs=available_jobs,
+            )
+        except Exception as exc:  # noqa: BLE001 - surface provider errors
+            raise HTTPException(
+                status_code=502,
+                detail=f"AI 分析排期失败：{exc}",
+            ) from exc
+        created_count = _seed_from_ai_plan(
+            db,
+            team_id=team_id,
+            project=project,
+            phases=phases,
+            plan=plan,
+            default_assignee=default_assignee,
+            create_tasks=bool(opts.create_tasks),
+            created_by_user_id=current_user.id,
+        )
+        ai_analysis = plan.analysis
+        generation_mode = "ai_analyze"
+        work_item_hint = f"，AI 分析生成 {created_count} 个工作项"
+    elif seed_mode == "from_requirements":
         created_count = _seed_from_requirements(
             db,
             team_id=team_id,
@@ -687,6 +803,8 @@ def generate_cycle_schedule(
             )
 
     project.plan_confirmed = False
+    project.schedule_generation_mode = generation_mode
+    project.schedule_ai_analysis = ai_analysis
     notify_team_members(
         db,
         team_id=team_id,
@@ -694,7 +812,11 @@ def generate_cycle_schedule(
         type="cycle_schedule_generated",
         category="周期",
         title="全周期排期已生成",
-        body=f"「{project.name}」已生成 {count} 个阶段（模式：{seed_mode}）{work_item_hint}。",
+        body=(
+            f"「{project.name}」已生成 {count} 个阶段（模式：{generation_mode}）"
+            f"{work_item_hint}。"
+            + (f" AI分析：{ai_analysis}" if ai_analysis else "")
+        )[:2000],
         link_path=f"/teams/{team_id}/projects/{project.id}/schedule",
         exclude_user_id=current_user.id,
     )

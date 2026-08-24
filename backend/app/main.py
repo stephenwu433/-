@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.auth import auth_status, get_current_user
+from app.ai_schedule import ai_configured, _model, _base_url
 from app.cors import cors_allow_origins
 from app.db import get_database_url, get_db, ping_database, run_smoke_test
 from app.models import User
@@ -26,7 +27,7 @@ from sqlalchemy.orm import Session
 app = FastAPI(
     title="PlanFlow API",
     description="团队版 PlanFlow 后端（Portfolio / Teams / Projects / Tasks）",
-    version="0.15.0",
+    version="0.16.0",
 )
 
 # Allow the Next.js app (usually :3000) to call this API (:8000) from the browser.
@@ -68,6 +69,21 @@ def health():
         "service": "planflow-api",
         "database_configured": get_database_url() is not None,
         "auth": auth_status(),
+        "ai_schedule": {
+            "configured": ai_configured(),
+            "model": _model() if ai_configured() else None,
+            "base_url": _base_url() if ai_configured() else None,
+        },
+    }
+
+
+@app.get("/ai/status")
+def ai_status(current_user: User = Depends(get_current_user)):
+    """Whether AI schedule analysis is available for this deployment."""
+    return {
+        "configured": ai_configured(),
+        "model": _model() if ai_configured() else None,
+        "base_url": _base_url() if ai_configured() else None,
     }
 
 
