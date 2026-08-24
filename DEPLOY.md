@@ -28,7 +28,7 @@ DATABASE_URL=（Neon 连接串，带 sslmode=require）
 CLERK_PUBLISHABLE_KEY=（与前端相同的 pk_…）
 PLANFLOW_CORS_ORIGINS=https://ban-weld.vercel.app
 
-# 可选：AI 自动分析排期（不配也能用规则模板）
+# 可选但排期必需：AI 自动分析排期
 OPENAI_API_KEY=sk-…
 # PLANFLOW_AI_BASE_URL=https://api.openai.com/v1
 # PLANFLOW_AI_MODEL=gpt-4o-mini
@@ -45,10 +45,13 @@ OPENAI_API_KEY=sk-…
 
 ### AI 排期怎么用
 
-1. 项目写好「目标 / 需求」（每行一条）和计划起止日期。  
-2. 打开「全周期排期」→ 点 **① AI 分析并生成排期**。  
-3. 系统调用大模型分析需求，输出五阶段工作项；页面会显示「AI 分析结论」。  
-4. 未配置 key 时按钮禁用，可改用「规则模板生成」。
+任务排期**默认且必须**走 AI 分析（按需求生成时）。
+
+1. 在后端配置 `OPENAI_API_KEY`（或兼容接口的 Base URL / Model）。  
+2. 项目写好「目标 / 需求」（每行一条）和计划起止日期。  
+3. 打开「全周期排期」→ 点 **① AI 分析并生成排期**。  
+4. 系统分析需求后输出五阶段工作项，并显示「AI 分析结论」。  
+5. 未配置 key 时无法按需求生成排期（可临时用高级方式：从已有任务挂阶段 / 空阶段）。
 
 ---
 

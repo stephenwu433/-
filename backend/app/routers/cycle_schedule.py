@@ -624,7 +624,7 @@ def generate_cycle_schedule(
         )
     _validate_dates(project.planned_start, project.planned_end)
 
-    seed_mode = (opts.seed_mode or "from_requirements").strip().lower()
+    seed_mode = (opts.seed_mode or "ai_analyze").strip().lower()
     if seed_mode not in {
         "from_requirements",
         "from_tasks",
@@ -635,19 +635,18 @@ def generate_cycle_schedule(
         raise HTTPException(
             status_code=400,
             detail=(
-                "seed_mode must be from_requirements, ai_analyze, from_tasks, "
+                "seed_mode must be ai_analyze, from_requirements, from_tasks, "
                 "phases_only, or placeholders"
             ),
         )
 
-    want_ai = seed_mode == "ai_analyze" or (
-        seed_mode == "from_requirements" and bool(opts.use_ai)
-    )
+    # Requirement-based schedules always go through AI analysis.
+    want_ai = seed_mode in {"ai_analyze", "from_requirements"}
     if want_ai and not ai_configured():
         raise HTTPException(
             status_code=400,
             detail=(
-                "AI 排期未配置。请在后端环境变量设置 OPENAI_API_KEY "
+                "任务排期需要 AI 分析。请在后端环境变量设置 OPENAI_API_KEY "
                 "（或 PLANFLOW_AI_API_KEY），可选 PLANFLOW_AI_BASE_URL / PLANFLOW_AI_MODEL。"
             ),
         )

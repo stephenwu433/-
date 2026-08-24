@@ -118,12 +118,12 @@ export function generateCycleSchedule(
     body: JSON.stringify({
       replace_existing: input.replace_existing ?? true,
       phase_count: input.phase_count ?? 5,
-      seed_mode: input.seed_mode ?? "from_requirements",
+      seed_mode: input.seed_mode ?? "ai_analyze",
       phase_names: input.phase_names,
       requirements_text: input.requirements_text ?? null,
       save_requirements_to_project: input.save_requirements_to_project ?? true,
       create_tasks: input.create_tasks ?? true,
-      use_ai: input.use_ai ?? false,
+      use_ai: input.use_ai ?? true,
     }),
   });
 }

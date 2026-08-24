@@ -51,7 +51,7 @@ export default function ProjectCycleSchedulePage() {
   const [busy, setBusy] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [seedMode, setSeedMode] = useState<SeedMode>("from_requirements");
+  const [seedMode, setSeedMode] = useState<SeedMode>("ai_analyze");
   const [requirementsText, setRequirementsText] = useState("");
   const [createTasks, setCreateTasks] = useState(true);
   const [weekdaysOnly, setWeekdaysOnly] = useState(true);
@@ -493,10 +493,10 @@ export default function ProjectCycleSchedulePage() {
               {empty ? (
                 <section className="rounded-md border border-dashed border-zinc-300 px-6 py-8">
                   <p className="text-center text-sm font-medium text-zinc-900">
-                    根据需求生成全周期排期
+                    AI 分析需求并生成全周期排期
                   </p>
                   <p className="mt-2 text-center text-sm text-zinc-600">
-                    先确认项目设置里有起止日期，再在下方填写需求。系统会按全周期拆成可执行工作项。
+                    任务排期由系统自动分析需求后给出。请确认项目起止日期，并在下方填写需求。
                   </p>
                   <div className="mx-auto mt-5 max-w-2xl">
                     <label className="block text-xs font-medium text-zinc-500">
@@ -540,34 +540,27 @@ export default function ProjectCycleSchedulePage() {
                       disabled={busy || !aiConfigured}
                       title={
                         aiConfigured
-                          ? "用 AI 分析需求并生成排期"
-                          : "后端未配置 OPENAI_API_KEY，暂不可用"
+                          ? "AI 分析需求并生成排期"
+                          : "需配置 OPENAI_API_KEY 后才能生成排期"
                       }
                       onClick={() => void onGenerate(true, "ai_analyze")}
                       className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                     >
                       {busy ? "分析中…" : "① AI 分析并生成排期"}
                     </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void onGenerate(true, "from_requirements")}
-                      className="rounded-md border border-zinc-300 px-4 py-2 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
-                    >
-                      {busy ? "生成中…" : "规则模板生成"}
-                    </button>
                   </div>
                   {!aiConfigured ? (
                     <p className="mt-3 text-center text-xs text-amber-800">
-                      AI 排期需在后端配置 OPENAI_API_KEY（可用 DeepSeek 等兼容接口 + PLANFLOW_AI_BASE_URL）。
+                      任务排期依赖 AI 分析。请在后端配置 OPENAI_API_KEY（可用 DeepSeek 等兼容接口 +
+                      PLANFLOW_AI_BASE_URL）。
                     </p>
                   ) : (
                     <p className="mt-3 text-center text-xs text-zinc-500">
-                      推荐：系统自动分析需求后给出五阶段全周期排期；也可改用规则模板。
+                      系统将分析需求并输出五阶段全周期排期与工作项。
                     </p>
                   )}
                   <details className="mx-auto mt-6 max-w-2xl text-sm text-zinc-600">
-                    <summary className="cursor-pointer text-zinc-500">其他生成方式</summary>
+                    <summary className="cursor-pointer text-zinc-500">高级：非 AI 辅助方式</summary>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -602,7 +595,7 @@ export default function ProjectCycleSchedulePage() {
                           title={
                             aiConfigured
                               ? "AI 重新分析需求并覆盖排期"
-                              : "后端未配置 OPENAI_API_KEY"
+                              : "需配置 OPENAI_API_KEY"
                           }
                           onClick={() => {
                             if (
@@ -616,38 +609,6 @@ export default function ProjectCycleSchedulePage() {
                           className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                         >
                           AI 重新分析排期
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "将按规则模板重新生成全周期排期（覆盖现有阶段与工作项），确定吗？",
-                              )
-                            ) {
-                              void onGenerate(true, "from_requirements");
-                            }
-                          }}
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          规则模板重生成
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "重新生成会覆盖现有阶段与工作项，确定吗？",
-                              )
-                            ) {
-                              void onGenerate(true, seedMode);
-                            }
-                          }}
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          其他方式重生成
                         </button>
                       </div>
                     </div>
