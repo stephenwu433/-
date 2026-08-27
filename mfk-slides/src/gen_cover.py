@@ -9,7 +9,7 @@ BG = Path("/home/ubuntu/.cursor/projects/workspace/assets/38a58645-eda5-4f5b-9a7
 W, H = 3840, 2160
 
 INK = (28, 28, 28)
-MUTED = (90, 90, 90)
+MUTED = (70, 70, 70)
 RED = (155, 36, 51)
 GOLD = (184, 148, 90)
 
@@ -72,41 +72,33 @@ def build():
 
     # eyebrow
     d.text(
-        (MX, 520),
+        (MX, 480),
         "LVMH BEAUTY  ·  未来 1–3 年香氛美学与体验创新",
         font=F["eyebrow"],
         fill=RED,
     )
 
     # hero — ONE line of brand promise as the cover signal
-    y = wrap(
-        d,
-        "让香气，准确表达复杂的你。",
-        (MX, 600),
-        F["hero"],
-        INK,
-        1750,
-        110,
-    )
+    hero = "让香气，准确表达复杂的你。"
+    d.text((MX, 580), hero, font=F["hero"], fill=INK)
+    # underline below full glyph height (~font size)
+    d.rectangle([MX, 580 + 110, MX + 140, 580 + 118], fill=GOLD)
 
-    # gold rule
-    d.rectangle([MX, y + 40, MX + 140, y + 48], fill=GOLD)
-
-    # one supporting sentence
+    # one supporting sentence — higher contrast
     wrap(
         d,
         "以调香师专业与嗅觉衣橱，帮助消费者确认属于自己的标志性香气。",
-        (MX, y + 80),
+        (MX, 740),
         F["support"],
-        MUTED,
+        INK,
         1680,
-        50,
+        52,
     )
 
     # ONE direction line (merged, not two competing lines)
-    d.text((MX, 1280), "战略方向", font=F["dir_label"], fill=RED)
-    d.text((MX + 200, 1272), "私人香气表达的精准权威", font=F["dir"], fill=INK)
-    d.text((MX, 1360), "品牌母题  ·  精准的感性", font=F["motif"], fill=MUTED)
+    d.text((MX, 980), "战略方向", font=F["dir_label"], fill=RED)
+    d.text((MX + 200, 972), "私人香气表达的精准权威", font=F["dir"], fill=INK)
+    d.text((MX, 1060), "品牌母题  ·  精准的感性", font=F["motif"], fill=MUTED)
 
     # footer
     d.text(
