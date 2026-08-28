@@ -67,8 +67,8 @@ def fonts():
     i = "/usr/share/fonts/truetype/inter/Inter-Regular.ttf"
     ib = "/usr/share/fonts/truetype/inter/Inter-Bold.ttf"
     return {
-        "brand": ImageFont.truetype(i, 22),
-        "eyebrow": ImageFont.truetype(ib, 28),
+        "brand": ImageFont.truetype(i, 22),  # Latin only
+        "eyebrow": ImageFont.truetype(b, 28, index=2),  # CJK — never Inter
         "title": ImageFont.truetype(s, 54, index=2),
         "hero": ImageFont.truetype(s, 68, index=2),
         "h2": ImageFont.truetype(s, 34, index=2),
@@ -77,7 +77,7 @@ def fonts():
         "small": ImageFont.truetype(n, 20, index=2),
         "tiny": ImageFont.truetype(n, 16, index=2),
         "sub": ImageFont.truetype(n, 26, index=2),
-        "label": ImageFont.truetype(ib, 18),
+        "label": ImageFont.truetype(b, 18, index=2),  # CJK — never Inter
         "num": ImageFont.truetype(ib, 36),
         "row": ImageFont.truetype(n, 30, index=2),
         "row_b": ImageFont.truetype(b, 32, index=2),

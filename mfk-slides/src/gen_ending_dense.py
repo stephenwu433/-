@@ -26,14 +26,14 @@ def fonts():
     ib = "/usr/share/fonts/truetype/inter/Inter-Bold.ttf"
     return {
         "brand": ImageFont.truetype(i, 26),
-        "eyebrow": ImageFont.truetype(ib, 30),
+        "eyebrow": ImageFont.truetype(b, 30, index=2),
         "hero": ImageFont.truetype(s, 72, index=2),
         "support": ImageFont.truetype(n, 32, index=2),
         "row": ImageFont.truetype(n, 30, index=2),
         "row_b": ImageFont.truetype(b, 32, index=2),
         "motif": ImageFont.truetype(n, 26, index=2),
         "body": ImageFont.truetype(n, 24, index=2),
-        "label": ImageFont.truetype(ib, 18),
+        "label": ImageFont.truetype(b, 18, index=2),
         "foot": ImageFont.truetype(ib, 20),
     }
 

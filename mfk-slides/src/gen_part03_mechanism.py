@@ -41,7 +41,7 @@ def fonts():
         "small": ImageFont.truetype(n, 22, index=2),
         "tiny": ImageFont.truetype(n, 18, index=2),
         "sub": ImageFont.truetype(n, 30, index=2),
-        "label": ImageFont.truetype(ib, 20),
+        "label": ImageFont.truetype(b, 20, index=2),
         "num": ImageFont.truetype(ib, 52),
         "num_sm": ImageFont.truetype(ib, 36),
         "brand": ImageFont.truetype(i, 20),

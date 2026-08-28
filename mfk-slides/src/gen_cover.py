@@ -22,7 +22,7 @@ def fonts():
     ib = "/usr/share/fonts/truetype/inter/Inter-Bold.ttf"
     return {
         "brand": ImageFont.truetype(i, 28),
-        "eyebrow": ImageFont.truetype(ib, 30),
+        "eyebrow": ImageFont.truetype(b, 30, index=2),
         "hero": ImageFont.truetype(s, 92, index=2),
         "support": ImageFont.truetype(n, 36, index=2),
         "dir_label": ImageFont.truetype(ib, 26),
