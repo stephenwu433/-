@@ -259,7 +259,7 @@ def slide_case_close():
 def slide_toc():
     img = Image.new("RGB", (W, H), CREAM)
     d = ImageDraw.Draw(img)
-    header(d, "00 / CONTENTS", "目录", "主汇报 28 页；技术中间表见附录。")
+    header(d, "00 / CONTENTS", "目录", "主汇报 29 页；技术中间表见附录。")
 
     parts = [
         ("PART 01", "界定战场与研究问题", "问题 · 目标消费者 · 战场分层"),
@@ -386,6 +386,7 @@ MAIN_ORDER = [
     ("mfk_02_competitor_map.png", "竞品地图"),
     ("mfk_02_mfk_diagnosis.png", "MFK诊断"),
     ("mfk_02_mfk_proposition.png", "时刻衣柜命题"),
+    ("mfk_03_00_chapter.png", "Part03章节扉页"),
     ("mfk_03_v1_contract.png", "系统筛选开篇"),
     ("mfk_03_01_mechanism.png", "筛选机制"),
     ("mfk_03_05_why_brd02.png", "为何主推精准的感性"),
