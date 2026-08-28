@@ -451,14 +451,14 @@ def slide1():
     d = draw_base(img)
     header(
         d,
-        "03 / VALIDATE P02  ·  1 of 5",
-        "验证契约：第二章命题 → 三个可计量验证问题",
+        "03 / SYSTEM SCREENING  ·  1 of 5",
+        "验证契约：系统筛选第二章「时刻衣柜」假设 → 三个可计量筛选问题",
         "本章不另起炉灶；用系统计数回答 Q1/Q2/Q3，再映射回「时刻衣柜」。",
     )
 
     # Part 02 claim
     rr(d, [MX, 300, W - MX, 480], SOFT_R, 12)
-    d.text((MX + 28, 320), "第二章命题（待验证）", font=F["label"], fill=RED)
+    d.text((MX + 28, 320), "第二章假设（待系统筛选）", font=F["label"], fill=RED)
     d.text(
         (MX + 28, 360),
         "从「一支爆款代名词」→「可按时刻编排的大师香氛衣柜」｜主攻场景 · 配套资产 · 避开词语",
@@ -529,7 +529,7 @@ def slide2():
     d = draw_base(img)
     header(
         d,
-        "03 / SYSTEM MECHANISM  ·  2 of 5",
+        "03 / SYSTEM SCREENING  ·  2 of 5",
         "系统机制（量化）：标签结构 · 空话闸 · 漏斗衰减",
         "机制用结构数据说话：26 标签如何分层、16 空话词如何拦截、5→2 如何衰减。",
     )
@@ -592,7 +592,7 @@ def slide3():
     d = draw_base(img)
     header(
         d,
-        "03 / INFERENCE Q1  ·  3 of 5",
+        "03 / SYSTEM SCREENING  ·  3 of 5",
         "推理①（量化）：场景冲突是否真实——证据堆叠与类型结构",
         "Q1 通过阈值：冲突可命名 + 跨平台可回溯（IG/TT/XHS 合计 49 条）。",
     )
@@ -659,7 +659,7 @@ def slide4():
     d = draw_base(img)
     header(
         d,
-        "03 / INFERENCE Q2  ·  4 of 5",
+        "03 / SYSTEM SCREENING  ·  4 of 5",
         "推理②（量化）：词语层淘汰率 · 过闸存活轨迹 · CHK 分布",
         "Q2 通过阈值：空话命中方向无法升格；可替换方向无法进主推池。",
     )
@@ -733,7 +733,7 @@ def slide5():
     d = draw_base(img)
     header(
         d,
-        "03 / INFERENCE Q3  ·  5 of 5",
+        "03 / SYSTEM SCREENING  ·  5 of 5",
         "推理③（量化）：资产四问评分 · 证据与主推背离 · 验证记分卡",
         "Q3：选择逻辑能否落成资产对；主推 = 稀缺×难复制最高，不看条数冠军。",
     )
@@ -755,7 +755,7 @@ def slide5():
     d.text((MX + 1814, 1230), "验证第二章：欣赏→确定选择，靠旅程把衣橱编成体验", font=F["small"], fill=MUTED)
 
     # Scorecard table
-    d.text((MX, 1320), "第三章验证记分卡（映射回第二章命题）", font=F["h2"], fill=INK)
+    d.text((MX, 1320), "第三章筛选记分卡（映射回锁定层级）", font=F["h2"], fill=INK)
     headers = ["验证项", "计量结果", "判定", "映射第二章"]
     widths = [480, 1100, 400, 1280]
     y = 1380
@@ -769,7 +769,7 @@ def slide5():
         ("Q1 场景冲突", "冲突证据29/49=59%；3冲突均可回溯", "通过", "主攻场景层：成立"),
         ("Q2 避开词语", "空话淘汰率25%；DIR-01未升格", "通过", "避开词语红海：成立"),
         ("Q3 选择逻辑", "BRD对：哲学25分+旅程25分", "通过*", "统一选择逻辑：可落成"),
-        ("命题总判", "时刻衣柜 = 精准感性 × 试香到签名", "成立", "爆款代名词→大师香氛衣柜"),
+        ("筛选总判", "母题×体验服务时刻衣柜", "内部证据链通过", "进入真人概念验证；备选保留"),
     ]
     for i, row in enumerate(scorecard):
         yy = 1432 + i * 100
