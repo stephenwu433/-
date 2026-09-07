@@ -324,9 +324,13 @@ class MyDailyTaskItem(BaseModel):
     project_id: uuid.UUID
     project_name: str
     phase_name: str | None = None
+    estimated_hours: float = 0.0
     my_hours: float = 0.0
     my_note: str | None = None
     my_entry_id: uuid.UUID | None = None
+    my_completion_percent: int = 0
+    # overdue: past due and not done; today: due or logged today; later: in-flight other work
+    bucket: str = "today"
 
 
 class MyDailyTasksResponse(BaseModel):
@@ -334,8 +338,15 @@ class MyDailyTasksResponse(BaseModel):
     task_count: int = 0
     todo_count: int = 0
     doing_count: int = 0
+    review_count: int = 0
     done_count: int = 0
+    returned_count: int = 0
+    overdue_count: int = 0
+    today_count: int = 0
+    later_count: int = 0
     my_logged_hours: float = 0.0
+    planned_hours: float = 0.0
+    capacity_hours: float = 6.0
     tasks: list[MyDailyTaskItem] = Field(default_factory=list)
 
 

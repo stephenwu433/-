@@ -4,6 +4,8 @@
 
 import { apiFetch } from "./api-client";
 
+export type MyDailyBucket = "overdue" | "today" | "later";
+
 export type MyDailyTaskItem = {
   task_id: string;
   title: string;
@@ -14,9 +16,12 @@ export type MyDailyTaskItem = {
   project_id: string;
   project_name: string;
   phase_name: string | null;
+  estimated_hours: number;
   my_hours: number;
   my_note: string | null;
   my_entry_id: string | null;
+  my_completion_percent: number;
+  bucket: MyDailyBucket | string;
 };
 
 export type MyDailyTasksResponse = {
@@ -24,8 +29,15 @@ export type MyDailyTasksResponse = {
   task_count: number;
   todo_count: number;
   doing_count: number;
+  review_count: number;
   done_count: number;
+  returned_count: number;
+  overdue_count: number;
+  today_count: number;
+  later_count: number;
   my_logged_hours: number;
+  planned_hours: number;
+  capacity_hours: number;
   tasks: MyDailyTaskItem[];
 };
 

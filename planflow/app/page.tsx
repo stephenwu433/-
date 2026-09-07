@@ -36,14 +36,14 @@ export default function Home() {
         <Show when="signed-in">
           <div className="mt-8 flex flex-col items-center gap-3">
             <p className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              登录成功。可以从项目总览开始，或先管理团队。
+              登录成功。建议从「我的今日工作台」开始处理指派给你的任务。
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/my-day"
                 className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
               >
-                我的今日任务
+                我的今日工作台
               </Link>
               <Link
                 href="/team-day"

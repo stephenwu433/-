@@ -126,7 +126,7 @@ export default function TeamDayPage() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-10">
       <p className="text-sm text-zinc-500">
         <Link href="/my-day" className="underline hover:text-zinc-800">
-          ← 我的今日
+          ← 我的今日工作台
         </Link>
         {" · "}
         <Link href="/workload" className="underline hover:text-zinc-800">

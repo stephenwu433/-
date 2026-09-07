@@ -43,6 +43,12 @@ function buildNav(
 
   return [
     {
+      key: "my-day",
+      label: "我的今日",
+      href: "/my-day",
+      match: (p) => p === "/my-day" || p.startsWith("/my-day/"),
+    },
+    {
       key: "portfolio",
       label: "项目总览",
       href: "/portfolio",
@@ -175,7 +181,9 @@ export function WorkbenchShell({
           <p className="text-sm font-semibold tracking-tight text-zinc-900">
             PlanFlow
           </p>
-          <p className="mt-0.5 text-xs text-zinc-500">项目工作台</p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            {projectName ? "当前项目" : "个人工作台"}
+          </p>
           {projectName ? (
             <p className="mt-2 truncate text-xs text-zinc-700">{projectName}</p>
           ) : null}
@@ -320,12 +328,6 @@ export function WorkbenchShell({
             ▦ 返回项目总览
           </Link>
           <div className="mt-2 flex flex-col gap-1">
-            <Link
-              href="/my-day"
-              className="text-[11px] text-zinc-500 underline hover:text-zinc-800"
-            >
-              我的今日
-            </Link>
             <Link
               href="/team-day"
               className="text-[11px] text-zinc-500 underline hover:text-zinc-800"
