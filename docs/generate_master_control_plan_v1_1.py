@@ -1,0 +1,515 @@
+#!/usr/bin/env python3
+"""Generate L'Oréal AI CS Project Master Control Plan V1.1 (internal PM doc)."""
+
+from pathlib import Path
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.shared import Cm, Pt, RGBColor
+
+
+OUT_DIR = Path(__file__).resolve().parent
+OUT_CN = OUT_DIR / "欧莱雅AI消费者理解与客服协作系统_项目主控计划_V1.1.docx"
+OUT_EN = OUT_DIR / "Loreal_AI_CS_Master_Control_Plan_V1.1.docx"
+ARTIFACT_DIR = Path("/opt/cursor/artifacts")
+
+
+def set_run_font(run, size=10.5, bold=False, color=None):
+    run.font.size = Pt(size)
+    run.bold = bold
+    run.font.name = "微软雅黑"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
+    if color:
+        run.font.color.rgb = color
+
+
+def add_heading_cn(doc, text, level=1):
+    p = doc.add_heading(text, level=level)
+    for run in p.runs:
+        run.font.name = "微软雅黑"
+        run._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
+        if level == 1:
+            run.font.color.rgb = RGBColor(0x1F, 0x4E, 0x79)
+            run.font.size = Pt(14)
+        elif level == 2:
+            run.font.color.rgb = RGBColor(0x2E, 0x75, 0xB6)
+            run.font.size = Pt(12)
+    return p
+
+
+def add_para(doc, text, bold=False, size=10.5, space_after=4):
+    p = doc.add_paragraph()
+    run = p.add_run(text)
+    set_run_font(run, size=size, bold=bold)
+    p.paragraph_format.space_after = Pt(space_after)
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.line_spacing = 1.15
+    return p
+
+
+def add_bullets(doc, items, size=10.5):
+    for item in items:
+        p = doc.add_paragraph(style="List Bullet")
+        run = p.add_run(item)
+        set_run_font(run, size=size)
+        p.paragraph_format.space_after = Pt(1)
+        p.paragraph_format.space_before = Pt(0)
+
+
+def set_cell_text(cell, text, bold=False, size=9):
+    cell.text = ""
+    p = cell.paragraphs[0]
+    run = p.add_run(str(text))
+    set_run_font(run, size=size, bold=bold)
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.space_before = Pt(0)
+
+
+def shade_cell(cell, hex_color):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = tcPr.makeelement(
+        qn("w:shd"),
+        {
+            qn("w:val"): "clear",
+            qn("w:color"): "auto",
+            qn("w:fill"): hex_color,
+        },
+    )
+    tcPr.append(shd)
+
+
+def shade_header_row(row, hex_color="1F4E79"):
+    for cell in row.cells:
+        shade_cell(cell, hex_color)
+        for p in cell.paragraphs:
+            for run in p.runs:
+                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.bold = True
+
+
+def add_table(doc, headers, rows):
+    table = doc.add_table(rows=1 + len(rows), cols=len(headers))
+    table.style = "Table Grid"
+    for i, h in enumerate(headers):
+        set_cell_text(table.rows[0].cells[i], h, bold=True, size=8.5)
+    shade_header_row(table.rows[0])
+    for r_idx, row in enumerate(rows):
+        for c_idx, val in enumerate(row):
+            set_cell_text(table.rows[r_idx + 1].cells[c_idx], val, size=8.5)
+            if r_idx % 2 == 1:
+                shade_cell(table.rows[r_idx + 1].cells[c_idx], "F2F2F2")
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    return table
+
+
+def kv_table(doc, pairs):
+    table = doc.add_table(rows=len(pairs), cols=2)
+    table.style = "Table Grid"
+    for i, (k, v) in enumerate(pairs):
+        set_cell_text(table.rows[i].cells[0], k, bold=True, size=9)
+        shade_cell(table.rows[i].cells[0], "D6E3F0")
+        set_cell_text(table.rows[i].cells[1], v, size=9)
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+    return table
+
+
+def build():
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Cm(1.6)
+    section.bottom_margin = Cm(1.6)
+    section.left_margin = Cm(1.8)
+    section.right_margin = Cm(1.8)
+
+    # ===== Cover / Header =====
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = title.add_run("欧莱雅AI消费者理解与客服协作系统")
+    set_run_font(run, size=16, bold=True, color=RGBColor(0x1F, 0x4E, 0x79))
+
+    title2 = doc.add_paragraph()
+    title2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = title2.add_run("项目主控计划 V1.1")
+    set_run_font(run, size=18, bold=True, color=RGBColor(0x1F, 0x4E, 0x79))
+
+    sub = doc.add_paragraph()
+    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = sub.add_run("项目范围 · 责任分工 · 关键路径 · 里程碑验收 · 风险管理")
+    set_run_font(run, size=11, bold=True, color=RGBColor(0x2E, 0x75, 0xB6))
+
+    note = doc.add_paragraph()
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = note.add_run(
+        "内部管理主控文件｜目标：让五人每天清楚做到哪、下一步交什么、谁被谁阻塞、何时砍功能"
+    )
+    set_run_font(run, size=9, color=RGBColor(0x66, 0x66, 0x66))
+
+    add_para(
+        doc,
+        "定位说明：本文件不是产品全案。产品细节、Schema、数据字段、技术设计放在四份子文档；"
+        "每日任务状态放在在线任务板。本文件只规定范围、规则、责任、门禁、依赖合同与决策记录。",
+        bold=True,
+        size=9.5,
+    )
+
+    kv_table(
+        doc,
+        [
+            ("项目经理", "待填写（1号）"),
+            ("团队成员", "待填写真实姓名：1号PM / 2号数据 / 3号AI评测 / 4号全栈 / 5号体验"),
+            ("当前版本", "V1.1"),
+            ("更新日期", "2026-09-08"),
+            ("内部完成日", "2026-10-15"),
+            ("官方截止时间", "2026-10-20（具体时刻待确认）"),
+            ("下一里程碑", "G1 需求冻结｜2026-09-12"),
+            ("当前总体状态", "黄灯｜有风险但可恢复"),
+        ],
+    )
+
+    # ===== 1 =====
+    add_heading_cn(doc, "一、项目状态总览（30秒看懂）", 1)
+    add_table(
+        doc,
+        ["项目", "当前状态"],
+        [
+            ["总体状态", "黄灯"],
+            ["当前阶段", "需求冻结与低保真原型"],
+            ["下一门禁", "9月12日｜业务与技术合同冻结（G1）"],
+            ["内部完成日", "10月15日"],
+            ["官方截止", "10月20日，具体时间待确认"],
+            ["当前核心路径", "场景 → 原型 → Schema → 20条种子数据 → MVP"],
+            ["主要风险", "唯一全栈；场景未冻结；官方数据/截止时刻未确认"],
+            ["本周目标", "一条案例可以手工走通完整流程"],
+        ],
+    )
+    add_para(doc, "状态灯规则：", bold=True, size=9.5)
+    add_bullets(
+        doc,
+        [
+            "绿灯：按计划。",
+            "黄灯：有风险但可恢复。",
+            "红灯：已经影响里程碑。",
+        ],
+        size=9.5,
+    )
+    add_para(
+        doc,
+        "状态更新规则：每次门禁日与每周日由项目经理更新本页；黄灯超7天未消除，升级讨论是否砍P1。",
+        size=9.5,
+    )
+
+    # ===== 2 =====
+    add_heading_cn(doc, "二、范围与优先级（已决定清单）", 1)
+    add_para(
+        doc,
+        "一句话定义：将消费者表达与上下文转化为可解释共情卡 + 下一步服务动作；"
+        "权限内优先自动解决，信息不足则追问，无法安全解决则带完整上下文转人工，结果回流品牌优化。",
+        bold=True,
+        size=9.5,
+    )
+    add_table(
+        doc,
+        ["功能", "优先级", "决定", "验收条件"],
+        [
+            ["消费者对话", "P0", "Keep", "可完成输入、追问、回复、反馈"],
+            ["共情卡", "P0", "Keep", "输出结构通过Schema校验"],
+            ["风险守卫", "P0", "Keep", "高风险案例不得强行推荐"],
+            ["人工接管包", "P0", "Keep", "已知信息完整传给人工"],
+            ["知识检索与依据展示", "P0", "Keep", "有依据可追溯；无依据不编造"],
+            ["可访问Demo", "P0", "Keep", "评委可访问或本地一键启动"],
+            ["基础评测与报告", "P0", "Keep", "有Gold/Challenge/Holdout结论"],
+            ["品牌后台", "P1", "Shrink", "先展示冻结统计数据"],
+            ["图片上传", "P1", "Shrink", "只做入口及模拟案例"],
+            ["语音入口", "P1", "Shrink", "入口+手工/模拟转写"],
+            ["真实订单CRM", "P1", "Shrink", "假订单适配器演示"],
+            ["3D/AR试妆", "P2", "Cut", "比赛期不开发"],
+            ["复杂图像诊断", "P2", "Cut", "比赛期不开发"],
+            ["多自治Agent互聊", "P2", "Cut", "比赛期不开发"],
+            ["真天猫订单接入", "P2", "Cut", "比赛期不开发"],
+        ],
+    )
+    add_para(doc, "范围规则（强制）：", bold=True, size=9.5)
+    add_para(
+        doc,
+        "任何新增需求必须说明：预期价值、预计工时、影响的里程碑、需要删除的现有任务；"
+        "由项目经理批准后才能进入任务板。未批准需求不得直接找全栈。",
+        size=9.5,
+    )
+    add_para(
+        doc,
+        "演示案例冻结口径：①低风险直接解决 ②信息不足追问后解决 ③中高风险建档转人工。"
+        "核心场景最终决策日：2026-09-12（G1）。",
+        size=9.5,
+    )
+
+    # ===== 3 =====
+    add_heading_cn(doc, "三、人员责任与投入容量", 1)
+    add_table(
+        doc,
+        ["姓名", "角色", "每周可投入小时", "固定不可用时间", "本阶段唯一结果", "备份人"],
+        [
+            ["待填A", "1号 项目经理", "待填写", "待填写", "范围、排期、验收、主案口径", "待填"],
+            ["待填B", "2号 数据/用研", "待填写", "待填写", "200条数据与真实性", "待填"],
+            ["待填C", "3号 AI/评测", "待填写", "待填写", "Schema、知识、评测", "待填"],
+            ["待填D", "4号 全栈", "待填写", "待填写", "可运行Demo主链路", "无"],
+            ["待填E", "5号 体验/呈现", "待填写", "待填写", "原型、PPT、视频、演示", "待填"],
+        ],
+    )
+    add_para(doc, "唯一全栈无备份时的强制兜底：", bold=True, size=9.5)
+    add_bullets(
+        doc,
+        [
+            "所有成员都要能运行Demo。",
+            "项目经理掌握部署账号和代码仓库权限。",
+            "3号能够修改Prompt、知识库和测试数据，不依赖全栈改配置。",
+            "5号不得直接要求全栈临时修改视觉；视觉变更经1号进入任务板。",
+            "全栈同时最多1个主任务；每周至少保留20%时间做集成与Bug。",
+        ],
+        size=9.5,
+    )
+    add_para(
+        doc,
+        "容量动作（9/9前完成）：五人填写每周小时与不可用时间；若全栈可用小时不足以支撑G2，"
+        "项目经理必须在G1当日砍掉至少1项P1。",
+        size=9.5,
+    )
+
+    # ===== 4 =====
+    add_heading_cn(doc, "四、关键路径与里程碑门禁", 1)
+    add_para(doc, "关键路径：", bold=True, size=9.5)
+    add_para(
+        doc,
+        "官方要求确认 → 核心场景冻结 → 低保真原型 → Schema与状态机 → 20条种子数据 → "
+        "核心链路MVP → 200条数据 → 正式评测 → 功能冻结 → 全案与视频 → 内部提交",
+        size=9.5,
+    )
+    add_table(
+        doc,
+        ["门禁", "日期", "必须交付", "验收人", "不通过的处理"],
+        [
+            [
+                "G1 需求冻结",
+                "9/12",
+                "场景、原型、Schema、状态机、20条数据、官方项确认",
+                "1号、4号",
+                "不得增加开发功能；继续补合同，全栈只做初始化",
+            ],
+            [
+                "G2 MVP",
+                "9/21",
+                "核心案例端到端真跑通（禁止假按钮）",
+                "1号",
+                "砍品牌后台等P1；暂停非主链路视觉",
+            ],
+            [
+                "G3 可验证版本",
+                "9/30",
+                "200条数据、基线对比、第一轮盲测",
+                "1号、3号",
+                "停止扩展场景；只修影响对比的缺陷",
+            ],
+            [
+                "G4 功能冻结",
+                "10/3",
+                "功能清单及已知问题清单",
+                "1号、4号",
+                "只修P0 Bug；拒绝新场景/新技术/新页面",
+            ],
+            [
+                "G5 内容冻结",
+                "10/13",
+                "数字、截图、评测结论全部冻结",
+                "1号",
+                "禁止修改对外口径；只改阻断性错误",
+            ],
+            [
+                "G6 内部提交",
+                "10/15",
+                "完整提交包和本地备份",
+                "1号",
+                "进入异常处理期（10/16–10/20仅处理阻断）",
+            ],
+        ],
+    )
+    add_para(
+        doc,
+        "门禁验收原则：项目经理逐项验收，不接受口头汇报；必须有链接、文件或可运行结果。",
+        bold=True,
+        size=9.5,
+    )
+
+    # ===== 5 =====
+    add_heading_cn(doc, "五、依赖与交付合同（工作包）", 1)
+    add_para(
+        doc,
+        "没有链接、文件或可运行结果，不算完成。状态仅用：待开始 / 进行中 / 待验收 / 已完成 / 已阻塞 / 已取消。",
+        size=9.5,
+    )
+    add_table(
+        doc,
+        ["工作包", "上游", "交付物", "截止", "下游", "验收条件", "状态", "交付链接"],
+        [
+            ["WP01", "1号", "官方截止/格式/评分确认截图", "9/9", "全员", "写入状态总览", "待开始", "待补"],
+            ["WP02", "1号", "Keep/Shrink/Cut签字版", "9/9", "全员", "范围表无争议项", "进行中", "本文档§二"],
+            ["WP03", "3号", "共情卡Schema v1 + 示例JSON", "9/10", "4号", "示例通过校验", "进行中", "待补飞书"],
+            ["WP04", "1+3号", "状态机与RESOLVE/ASK/HANDOFF/BLOCK规则", "9/11", "4号", "4号确认可实现", "待开始", "待补"],
+            ["WP05", "2+3号", "20条种子案例CSV（含三类演示）", "9/11", "4号", "覆盖三类演示", "待开始", "待补CSV"],
+            ["WP06", "5号", "三页低保真原型+三条跳转", "9/12", "4号", "每个按钮有状态", "待开始", "待补Figma"],
+            ["WP07", "1号", "页面—状态合同表（简版）", "9/12", "4号", "无口头歧义", "待开始", "待补"],
+            ["WP08", "2收+3整", "知识/SOP/转人工条件CSV v1", "9/14", "4号", "可检索且有来源", "待开始", "待补"],
+            ["WP09", "4号", "核心链路MVP可访问Demo", "9/21", "1+5号", "G2端到端通过", "待开始", "待补URL"],
+            ["WP10", "2号", "200条冻结数据集+来源脱敏说明", "9/30", "3+1号", "身份互斥可抽查", "待开始", "待补"],
+            ["WP11", "3号", "评测报告v1（含Holdout）", "10/7", "1号", "指标与失败分类齐全", "待开始", "待补"],
+            ["WP12", "5号", "PPT+视频+演示脚本", "10/14", "1号", "与冻结Demo一致", "待开始", "待补"],
+            ["WP13", "1号", "内部提交包与备份", "10/15", "全员", "G6清单勾完", "待开始", "待补"],
+        ],
+    )
+    add_para(doc, "全栈关键依赖顺序（不可颠倒）：", bold=True, size=9.5)
+    add_para(
+        doc,
+        "WP03 Schema → WP05 种子数据 → WP04 状态机 → WP06 原型 → WP08 知识 → WP09 MVP → WP10/WP11 评测 → WP12 演示",
+        size=9.5,
+    )
+    add_para(
+        doc,
+        "阻塞上报：下游被阻塞超过24小时，必须在任务板标注“已阻塞”并写明阻塞来源工作包；"
+        "项目经理当日裁决：催交付 / 降范围 / 改验收。",
+        size=9.5,
+    )
+
+    # ===== 6 =====
+    add_heading_cn(doc, "六、风险 / 问题 / 决策记录", 1)
+    add_heading_cn(doc, "6.1 风险（可能发生）", 2)
+    add_table(
+        doc,
+        ["风险", "概率", "影响", "负责人", "预防措施", "触发后措施"],
+        [
+            ["唯一全栈过载", "高", "高", "1号", "P2全砍；需求防火墙；每周留20%缓冲", "立即砍P1；冻结非主链路视觉"],
+            ["场景未按时冻结", "中", "高", "1号", "9/10给出候选；9/12强制决策", "由1号拍板暂定场景，不再讨论"],
+            ["官方截止时刻/格式未确认", "中", "高", "1号", "9/9前登录确认并截图", "按最严格式准备；预留10/16–20缓冲"],
+            ["数据/知识滞后阻塞开发", "中", "高", "2/3号", "先20条种子跑通，再扩200", "全栈用种子继续；数据并行补齐"],
+            ["评测口径不清导致返工", "中", "中", "3号", "G1前定评分表骨架", "以已冻结指标为准，拒临时加项"],
+            ["Demo部署/权限故障", "中", "高", "4号/1号", "双人可启动；账号交1号", "启用本地备份演示+截图预案"],
+        ],
+    )
+    add_heading_cn(doc, "6.2 问题（已经发生）", 2)
+    add_table(
+        doc,
+        ["问题", "发现时间", "影响任务", "负责人", "解决期限", "当前状态"],
+        [
+            ["真实姓名与投入小时未填写", "9/8", "容量规划、任务分配", "1号", "9/9", "进行中"],
+            ["官方截止具体时刻待确认", "9/8", "提交计划", "1号", "9/9", "待开始"],
+            ["核心场景尚未最终冻结", "9/8", "原型/数据/开发", "1号", "9/12", "进行中"],
+            ["工作包交付链接多为空", "9/8", "验收可信度", "各上游", "随交付补齐", "进行中"],
+        ],
+    )
+    add_heading_cn(doc, "6.3 决策（已确认，避免重复争论）", 2)
+    add_table(
+        doc,
+        ["决策编号", "日期", "决策内容", "原因", "影响范围", "决策人"],
+        [
+            ["D001", "9/8", "只做1个核心场景+2个边界案例", "保护唯一全栈产能", "产品/数据/Demo", "1号"],
+            ["D002", "9/8", "品牌后台先用冻结统计", "不阻塞主链路", "前端/数据", "1号、4号"],
+            ["D003", "9/8", "比赛期Cut：3D/AR、复杂图像诊断、多Agent互聊、真订单", "投入产出不划算", "范围", "1号"],
+            ["D004", "9/8", "先低保真业务原型，再开发；高保真不阻塞开发合同", "减少全栈返工", "体验/开发", "1号、5号"],
+            ["D005", "9/8", "Word不作唯一任务板；动态任务进在线表", "状态需每日可变", "管理方式", "1号"],
+            ["D006", "9/8", "内部提交日定为10/15，10/16–20仅处理阻断", "保留官方截止缓冲", "排期", "1号"],
+        ],
+    )
+
+    # ===== Management rhythm =====
+    add_heading_cn(doc, "七、管理体系与日常节奏（简规）", 1)
+    add_para(doc, "三件套：", bold=True, size=9.5)
+    add_bullets(
+        doc,
+        [
+            "主控Word（本文）：范围、责任、门禁、工作包合同、风险/问题/决策。",
+            "在线任务板：每日执行状态（飞书多维表格/Excel/项目管理工具）。",
+            "四份子文档：产品需求与原型；数据与标注手册；技术接口与架构；评测方案与结果。",
+        ],
+        size=9.5,
+    )
+    add_table(
+        doc,
+        ["子文档", "负责人", "当前版本", "截止", "链接"],
+        [
+            ["A. 产品需求与原型", "1号+5号", "待建", "9/12", "待补"],
+            ["B. 数据与标注手册", "2号+3号", "待建", "9/17", "待补"],
+            ["C. 技术接口与架构", "4号", "待建", "9/14", "待补"],
+            ["D. 评测方案与结果", "3号", "待建", "10/7", "待补"],
+        ],
+    )
+    add_para(doc, "任务板固定字段：", bold=True, size=9.5)
+    add_para(
+        doc,
+        "任务ID｜所属工作流｜任务名称｜优先级｜负责人｜协助人｜开始日期｜截止日期｜预计工时｜"
+        "前置任务｜交付物链接｜验收标准｜当前状态｜阻塞原因｜最后更新时间",
+        size=9,
+    )
+    add_para(
+        doc,
+        "状态只允许：待开始 / 进行中 / 待验收 / 已完成 / 已阻塞 / 已取消。"
+        "禁止“差不多完成”“正在看看”“基本可以”。",
+        bold=True,
+        size=9.5,
+    )
+    add_para(doc, "每日15分钟（每人只答四句）：", bold=True, size=9.5)
+    add_bullets(
+        doc,
+        [
+            "昨天交付了什么链接或文件？",
+            "今天要交付什么？",
+            "被谁阻塞或正在阻塞谁？",
+            "是否影响下一个门禁？",
+        ],
+        size=9.5,
+    )
+    add_para(doc, "每周两次专项：", bold=True, size=9.5)
+    add_bullets(
+        doc,
+        [
+            "周三：技术集成检查，重点看全栈是否被阻塞。",
+            "周日：里程碑、风险和下周容量检查；更新状态总览灯号。",
+        ],
+        size=9.5,
+    )
+
+    # ===== Immediate actions =====
+    add_heading_cn(doc, "八、V1.1 落地动作清单（先改这10项）", 1)
+    add_table(
+        doc,
+        ["序号", "动作", "负责人", "截止", "完成标志"],
+        [
+            ["1", "确认官方截止具体时刻并截图", "1号", "9/9", "写入状态总览+WP01链接"],
+            ["2", "把“已有欧莱雅MVP”核对为真实代码状态", "1号+4号", "9/9", "Keep表与代码对照签字"],
+            ["3", "1–5号替换为真实姓名", "1号", "9/9", "§三表格填完"],
+            ["4", "填写每人每周可投入小时与不可用时间", "全员", "9/9", "§三无“待填写”"],
+            ["5", "确定核心场景最终决策日并预告", "1号", "已定9/12", "日历通知全员"],
+            ["6", "为进行中工作包补交付链接与状态", "各上游", "持续", "WP表无空链接（完成后）"],
+            ["7", "给全栈主任务补预计工时", "4号+1号", "9/10", "任务板可见工时"],
+            ["8", "维护风险/问题/决策三表", "1号", "每周日", "周日例会更新"],
+            ["9", "创建在线任务板并迁入未来7天任务", "1号", "9/9", "全员可编辑"],
+            ["10", "主控Word保持8–12页；细节只进子文档", "1号", "持续", "本文不膨胀"],
+        ],
+    )
+
+    footer = doc.add_paragraph()
+    footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = footer.add_run("— 主控计划 V1.1 完｜变更需记入决策表后改版 —")
+    set_run_font(run, size=9, color=RGBColor(0x66, 0x66, 0x66))
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    doc.save(OUT_CN)
+    doc.save(OUT_EN)
+    # artifacts with ascii + cn names
+    doc.save(ARTIFACT_DIR / "Loreal_AI_CS_Master_Control_Plan_V1.1.docx")
+    doc.save(ARTIFACT_DIR / "欧莱雅AI消费者理解与客服协作系统_项目主控计划_V1.1.docx")
+    print(f"Wrote: {OUT_CN}")
+    print(f"Wrote: {OUT_EN}")
+
+
+if __name__ == "__main__":
+    build()
