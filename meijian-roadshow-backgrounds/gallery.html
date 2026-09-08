@@ -1,0 +1,4764 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>梅见品牌叙事智能决策系统｜18页路演</title>
+  <base href="https://gilded-tanuki-0a890f.netlify.app/">
+  <style>
+    :root {
+      --stage-width: 1600px;
+      --stage-height: 900px;
+      --black: #05070a;
+      --panel: #11151a;
+      --line: rgba(243, 242, 238, 0.18);
+      --title: #f3f2ee;
+      --secondary: #cfd2d6;
+      --muted: #969da5;
+      font-family: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #020305;
+      color: var(--title);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--title);
+      outline-offset: 3px;
+    }
+
+    h1,
+    p {
+      margin: 0;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 100;
+      padding: 10px 14px;
+      color: #0a0c0f;
+      background: var(--title);
+      transform: translateY(-160%);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .deck {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .stage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: var(--stage-width);
+      height: var(--stage-height);
+      overflow: hidden;
+      background: var(--black);
+      transform-origin: center center;
+      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.52);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow: hidden;
+      background-color: var(--black);
+      background-image: var(--slide-bg);
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+
+    .slide.is-active {
+      display: block;
+    }
+
+    /* P01：背景已经定稿，HTML只叠加四组可编辑文字。 */
+    .slide-cover {
+      --p01-left-axis: 8%;
+      color: var(--title);
+    }
+
+    .p01-brief,
+    .p01-title-block,
+    .p01-signature {
+      position: absolute;
+      left: var(--p01-left-axis);
+    }
+
+    .p01-brief {
+      top: 96px;
+      width: 760px;
+      color: var(--secondary);
+    }
+
+    .p01-brief > span,
+    .p01-brief > p {
+      display: block;
+      letter-spacing: 0;
+    }
+
+    .p01-brief > span {
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .p01-brief > p {
+      margin-top: 10px;
+      font-size: 23.333px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    .p01-title-block {
+      top: 258px;
+      width: 860px;
+    }
+
+    .p01-title-block h1 {
+      color: var(--title);
+      font-size: 73.333px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .p01-lead {
+      max-width: 820px;
+      margin-top: 26px;
+      color: var(--secondary);
+      font-size: 25px;
+      font-weight: 400;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    .p01-signature {
+      bottom: 68px;
+      display: flex;
+      gap: 1em;
+      align-items: baseline;
+      color: var(--secondary);
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+
+    .p01-signature [data-edit="P01_TEAM"] {
+      font-weight: 500;
+    }
+
+    /* P02：2025年消费环境。三项指标采用局部信息卡，不覆盖原背景。 */
+    .slide-market-context {
+      --market-ink: #20242a;
+      --market-muted: #414750;
+      --market-blue: #6d8fd6;
+      --market-slate: #8e99a7;
+      --market-amber: #bd7d31;
+      color: var(--market-ink);
+    }
+
+    .market-context-header,
+    .market-context-grid,
+    .market-context-transition,
+    .market-context-footer {
+      position: absolute;
+      left: 128px;
+      z-index: 2;
+    }
+
+    .market-context-header {
+      top: 72px;
+      width: 1180px;
+    }
+
+    .market-context-kicker {
+      color: var(--market-muted);
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .market-context-header h1 {
+      margin: 8px 0 0;
+      color: var(--market-ink);
+      font-size: 48px;
+      font-weight: 600;
+      line-height: 1.14;
+      letter-spacing: 0;
+    }
+
+    .market-context-subtitle {
+      margin: 12px 0 0;
+      color: var(--market-muted);
+      font-size: 25px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
+    .market-context-grid {
+      top: 255px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 28px;
+      width: 1344px;
+    }
+
+    .market-context-item {
+      box-sizing: border-box;
+      min-height: 292px;
+      padding: 27px 29px 25px;
+      border: 1px solid rgba(32, 36, 42, 0.2);
+      background: rgba(244, 246, 249, 0.88);
+    }
+
+    .market-card--blue {
+      border-color: rgba(109, 143, 214, 0.58);
+      background: rgba(235, 240, 250, 0.9);
+    }
+
+    .market-card--slate {
+      border-color: rgba(142, 153, 167, 0.58);
+      background: rgba(239, 242, 245, 0.9);
+    }
+
+    .market-card--amber {
+      border-color: rgba(189, 125, 49, 0.58);
+      background: rgba(248, 241, 232, 0.9);
+    }
+
+    .market-card-index {
+      display: block;
+      margin-bottom: 15px;
+      color: var(--market-blue);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: 0.08em;
+    }
+
+    .market-card--slate .market-card-index {
+      color: #687482;
+    }
+
+    .market-card--amber .market-card-index {
+      color: var(--market-amber);
+    }
+
+    .market-context-item h2 {
+      margin: 0;
+      color: var(--market-ink);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .market-metric-value {
+      display: block;
+      margin-top: 20px;
+      color: var(--market-ink);
+      font-size: 46px;
+      font-weight: 650;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .market-metric-compare {
+      margin: 19px 0 0;
+      color: var(--market-muted);
+      font-size: 23px;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    .market-metric-insight {
+      margin: 18px 0 0;
+      color: var(--market-muted);
+      font-size: 21px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .market-card--amber .market-metric-insight {
+      margin-top: 70px;
+    }
+
+    .market-context-transition {
+      top: 606px;
+      width: 980px;
+      color: #f3f2ee;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .market-context-footer {
+      top: 710px;
+      width: 1280px;
+      color: #cfd2d6;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    /* P05：市场发现。透明三列与极简关系图，不覆盖既有背景。 */
+    .slide-p05 {
+      --p05-ink: #20242a;
+      --p05-muted: #49515b;
+      --p05-blue: #5879ad;
+      --p05-amber: #ac712b;
+      color: var(--p05-ink);
+    }
+
+    .p05-header,
+    .p05-findings,
+    .p05-relation,
+    .p05-conclusion,
+    .p05-footer {
+      position: absolute;
+      left: 128px;
+      z-index: 2;
+    }
+
+    .p05-header {
+      top: 72px;
+      width: 1320px;
+    }
+
+    .p05-header h1 {
+      margin: 0;
+      color: var(--p05-ink);
+      font-size: 50px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p05-findings {
+      top: 208px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 46px;
+      width: 1344px;
+    }
+
+    .p05-finding {
+      box-sizing: border-box;
+      min-width: 0;
+      min-height: 268px;
+      padding: 17px 18px 18px;
+      border-top: 1px solid rgba(32, 36, 42, 0.42);
+      background: linear-gradient(90deg, rgba(241, 243, 246, 0.84) 0%, rgba(241, 243, 246, 0.64) 82%, rgba(241, 243, 246, 0.28) 100%);
+    }
+
+    .p05-category {
+      margin: 0;
+      color: var(--p05-blue);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p05-finding:nth-child(3) .p05-category {
+      color: var(--p05-amber);
+    }
+
+    .p05-finding h2 {
+      min-height: 72px;
+      margin: 13px 0 0;
+      color: var(--p05-ink);
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p05-explanation {
+      min-height: 88px;
+      margin: 13px 0 0;
+      color: #343b44;
+      font-size: 21px;
+      font-weight: 400;
+      line-height: 1.55;
+    }
+
+    .p05-evidence {
+      margin: 13px 0 0;
+      color: #46515e;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .p05-relation {
+      top: 532px;
+      width: 1180px;
+      margin-left: 82px;
+      text-align: center;
+    }
+
+    .p05-relation-main {
+      display: grid;
+      grid-template-columns: 1fr 76px 1fr 76px 1fr;
+      align-items: center;
+      color: var(--p05-ink);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p05-relation-arrow {
+      color: #67717d;
+      font-size: 29px;
+      font-weight: 400;
+    }
+
+    .p05-relation-focus {
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--p05-amber);
+    }
+
+    .p05-verify-list {
+      margin: 15px auto 0;
+      color: var(--p05-muted);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .p05-conclusion {
+      top: 670px;
+      width: 980px;
+      margin: 0;
+      color: var(--p05-ink);
+      font-size: 29px;
+      font-weight: 600;
+      line-height: 1.38;
+    }
+
+    .p05-footer {
+      top: 808px;
+      width: 850px;
+      margin: 0;
+      color: #303740;
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    /* P06：已有工具与本项目的连接关系。利用背景明暗分区，不增加大面板。 */
+    .slide-p06 {
+      --p06-dark: #20242a;
+      --p06-dark-muted: #414953;
+      --p06-light: #f3f2ee;
+      --p06-light-muted: #c8cdd3;
+      --p06-line-dark: rgba(32, 36, 42, 0.42);
+      --p06-line-light: rgba(207, 210, 214, 0.45);
+    }
+
+    .p06-header,
+    .p06-layout,
+    .p06-conclusion,
+    .p06-footer {
+      position: absolute;
+      left: 128px;
+      z-index: 2;
+    }
+
+    .p06-header {
+      top: 70px;
+      display: grid;
+      grid-template-columns: 610px 650px;
+      column-gap: 94px;
+      width: 1354px;
+    }
+
+    .p06-header h1 {
+      display: contents;
+      margin: 0;
+      font-size: 48px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p06-title-left {
+      color: var(--p06-dark);
+    }
+
+    .p06-title-right {
+      color: var(--p06-light);
+    }
+
+    .p06-layout {
+      top: 190px;
+      display: grid;
+      grid-template-columns: 540px 760px;
+      column-gap: 136px;
+      width: 1436px;
+    }
+
+    .p06-section-label {
+      margin: 0 0 16px;
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p06-existing .p06-section-label {
+      color: #3f4a55;
+    }
+
+    .p06-process .p06-section-label {
+      color: #9eb8df;
+    }
+
+    .p06-tool-list {
+      margin: 0;
+    }
+
+    .p06-existing {
+      position: relative;
+      box-sizing: border-box;
+      isolation: isolate;
+      padding: 12px 18px 14px;
+      background: transparent;
+    }
+
+    .p06-existing::before {
+      position: absolute;
+      inset: -4px 2px -4px -6px;
+      z-index: -1;
+      background: rgba(239, 237, 232, 0.78);
+      content: "";
+      filter: blur(15px);
+    }
+
+    .p06-tool {
+      padding: 13px 0 14px;
+      border-top: 1px solid var(--p06-line-dark);
+    }
+
+    .p06-tool:last-child {
+      border-bottom: 1px solid var(--p06-line-dark);
+    }
+
+    .p06-tool dt {
+      color: #181c21;
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p06-tool dd {
+      margin: 6px 0 0;
+      color: #343b44;
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
+    .p06-bridge {
+      position: absolute;
+      top: 108px;
+      left: 566px;
+      width: 100px;
+      height: 18px;
+      border-top: 2px solid #69737d;
+    }
+
+    .p06-bridge::after {
+      position: absolute;
+      top: -5px;
+      right: -1px;
+      width: 9px;
+      height: 9px;
+      border-top: 2px solid #69737d;
+      border-right: 2px solid #69737d;
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p06-process-chain {
+      display: grid;
+      grid-template-columns: 1fr 42px 1fr 42px 1fr;
+      align-items: start;
+      margin-top: 45px;
+    }
+
+    .p06-process-node {
+      min-width: 0;
+      padding-top: 16px;
+      border-top: 1px solid var(--p06-line-light);
+    }
+
+    .p06-process-node h2 {
+      margin: 0;
+      color: var(--p06-light);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.28;
+      white-space: nowrap;
+    }
+
+    .p06-process-node p {
+      margin: 13px 0 0;
+      color: var(--p06-light-muted);
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    .p06-chain-arrow {
+      margin-top: 14px;
+      color: #9ba3ad;
+      font-size: 26px;
+      font-weight: 400;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .p06-conclusion {
+      top: 625px;
+      width: 1040px;
+      margin: 0;
+      color: var(--p06-light);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.38;
+    }
+
+    .p06-footer {
+      top: 832px;
+      width: 1100px;
+      margin: 0;
+      color: #bfc5cc;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    /* P07：输入、处理、输出与人工确认。借用背景蓝色通道，不增加主面板。 */
+    .slide-p07 {
+      --p07-main: #f3f2ee;
+      --p07-muted: #c8cdd3;
+      --p07-blue: #9eb8df;
+      --p07-line: rgba(207, 210, 214, 0.48);
+      color: var(--p07-main);
+    }
+
+    .p07-header,
+    .p07-flow,
+    .p07-conclusion,
+    .p07-footer {
+      position: absolute;
+      left: 128px;
+      z-index: 2;
+    }
+
+    .p07-header {
+      top: 70px;
+      width: 1344px;
+    }
+
+    .p07-header h1 {
+      margin: 0;
+      color: var(--p07-main);
+      font-size: 50px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p07-flow {
+      top: 190px;
+      width: 1344px;
+      height: 450px;
+    }
+
+    .p07-input,
+    .p07-process,
+    .p07-output,
+    .p07-human {
+      position: absolute;
+    }
+
+    .p07-input {
+      top: 0;
+      left: 0;
+      width: 390px;
+    }
+
+    .p07-process {
+      top: 0;
+      left: 530px;
+      width: 290px;
+    }
+
+    .p07-output {
+      top: 0;
+      left: 930px;
+      width: 414px;
+    }
+
+    .p07-section-title {
+      margin: 0 0 18px;
+      color: var(--p07-blue);
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p07-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .p07-list li {
+      padding: 14px 0 15px;
+      border-top: 1px solid var(--p07-line);
+      color: var(--p07-main);
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.28;
+    }
+
+    .p07-list li:last-child {
+      border-bottom: 1px solid var(--p07-line);
+    }
+
+    .p07-output .p07-list li {
+      font-size: 25px;
+      font-weight: 600;
+    }
+
+    .p07-process-words {
+      margin: 94px 0 0;
+      color: var(--p07-main);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.3;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .p07-arrow {
+      position: absolute;
+      top: 160px;
+      width: 72px;
+      border-top: 1.5px solid #9aa3ad;
+    }
+
+    .p07-arrow::after {
+      position: absolute;
+      top: -5px;
+      right: -1px;
+      width: 9px;
+      height: 9px;
+      border-top: 1.5px solid #9aa3ad;
+      border-right: 1.5px solid #9aa3ad;
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p07-arrow-one {
+      left: 422px;
+    }
+
+    .p07-arrow-two {
+      left: 834px;
+    }
+
+    .p07-human {
+      top: 374px;
+      left: 930px;
+      width: 360px;
+      padding-top: 14px;
+      border-top: 1px solid var(--p07-line);
+    }
+
+    .p07-human::before {
+      position: absolute;
+      top: -105px;
+      left: 28px;
+      width: 1px;
+      height: 105px;
+      background: rgba(158, 184, 223, 0.72);
+      content: "";
+    }
+
+    .p07-human h2 {
+      margin: 0;
+      color: var(--p07-main);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p07-human p {
+      margin: 7px 0 0;
+      color: var(--p07-muted);
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
+    .p07-conclusion {
+      top: 680px;
+      width: 1020px;
+      margin: 0;
+      color: var(--p07-main);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.38;
+    }
+
+    .p07-footer {
+      top: 824px;
+      width: 1120px;
+      margin: 0;
+      color: #bcc3cb;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    /* P08：四Agent职责、确定性编排与贯穿式人工治理。 */
+    .slide-p08 {
+      --p08-main: #f3f2ee;
+      --p08-muted: #c8cdd3;
+      --p08-blue: #a9c8f1;
+      --p08-line: rgba(207, 210, 214, 0.46);
+      color: var(--p08-main);
+    }
+
+    .p08-header,
+    .p08-architecture,
+    .p08-conclusion {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+    }
+
+    .p08-header {
+      top: 58px;
+      width: 1400px;
+    }
+
+    .p08-kicker {
+      margin: 0 0 9px;
+      color: var(--p08-blue);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.3;
+      letter-spacing: 0.06em;
+    }
+
+    .p08-header h1 {
+      margin: 0;
+      color: var(--p08-main);
+      font-size: 49px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p08-architecture {
+      top: 155px;
+      width: 1400px;
+      height: 575px;
+    }
+
+    .p08-orchestrator {
+      position: absolute;
+      top: 0;
+      left: 405px;
+      width: 590px;
+      padding: 15px 26px 16px;
+      border-top: 1px solid rgba(169, 200, 241, 0.86);
+      border-bottom: 1px solid rgba(169, 200, 241, 0.42);
+      background: linear-gradient(90deg, rgba(8, 14, 20, 0.30), rgba(8, 14, 20, 0.62), rgba(8, 14, 20, 0.30));
+      text-align: center;
+    }
+
+    .p08-orchestrator h2 {
+      margin: 0;
+      color: var(--p08-main);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p08-orchestrator p {
+      margin: 6px 0 0;
+      color: var(--p08-muted);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    .p08-control-label {
+      position: absolute;
+      top: 105px;
+      left: 90px;
+      margin: 0;
+      color: #aeb7c0;
+      font-size: 16px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    .p08-lines {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 1400px;
+      height: 575px;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .p08-agents {
+      position: absolute;
+      top: 170px;
+      left: 0;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 300px);
+      column-gap: 66px;
+      width: 1400px;
+    }
+
+    .p08-agent {
+      position: relative;
+      min-height: 236px;
+      padding: 20px 21px 18px;
+      border-top: 1px solid rgba(207, 210, 214, 0.68);
+      border-bottom: 1px solid rgba(207, 210, 214, 0.24);
+      background: linear-gradient(180deg, rgba(7, 12, 17, 0.70), rgba(7, 12, 17, 0.43));
+    }
+
+    .p08-agent-index {
+      margin: 0 0 10px;
+      color: var(--p08-blue);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.08em;
+    }
+
+    .p08-agent h3 {
+      margin: 0 0 19px;
+      color: var(--p08-main);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .p08-agent p {
+      margin: 0;
+      color: var(--p08-muted);
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    .p08-agent p + p {
+      margin-top: 6px;
+    }
+
+    .p08-loop-label {
+      position: absolute;
+      top: 127px;
+      left: 1010px;
+      z-index: 2;
+      margin: 0;
+      color: var(--p08-blue);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .p08-governance {
+      position: absolute;
+      top: 470px;
+      left: 0;
+      width: 1400px;
+      padding-top: 17px;
+      border-top: 1px solid rgba(207, 210, 214, 0.48);
+    }
+
+    .p08-governance-label {
+      display: inline-block;
+      margin-right: 24px;
+      color: var(--p08-blue);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .p08-governance-text {
+      color: var(--p08-main);
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .p08-conclusion {
+      top: 790px;
+      width: 1220px;
+      margin: 0;
+      color: var(--p08-main);
+      font-size: 29px;
+      font-weight: 600;
+      line-height: 1.36;
+    }
+
+    /* P09：审查意见通过状态编排连接到候选后续处理。 */
+    .slide-p09 {
+      --p09-ink: #090c10;
+      --p09-muted: #151a20;
+      --p09-blue: #224f7e;
+      --p09-blue-soft: #416b95;
+      --p09-amber: #94530d;
+      --p09-line: rgba(22, 28, 34, 0.68);
+      color: var(--p09-ink);
+    }
+
+    .p09-header,
+    .p09-body,
+    .p09-conclusion {
+      position: absolute;
+      left: 625px;
+      z-index: 2;
+      width: 900px;
+    }
+
+    .p09-header {
+      top: 58px;
+    }
+
+    .p09-header h1 {
+      margin: 0;
+      color: var(--p09-ink);
+      font-size: 50px;
+      font-weight: 700;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p09-subtitle {
+      margin: 10px 0 0;
+      color: var(--p09-blue);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p09-body {
+      top: 170px;
+      height: 590px;
+    }
+
+    .p09-review-flow {
+      position: relative;
+      width: 900px;
+      height: 226px;
+    }
+
+    .p09-flow-line {
+      position: absolute;
+      top: 20px;
+      left: 17px;
+      z-index: 0;
+      width: 2px;
+      height: 194px;
+      background: linear-gradient(180deg, var(--p09-blue-soft), rgba(84, 125, 169, 0.42));
+    }
+
+    .p09-flow-line::after {
+      position: absolute;
+      right: -5px;
+      bottom: -1px;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid var(--p09-blue);
+      border-bottom: 2px solid var(--p09-blue);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p09-flow-stage {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      align-items: center;
+      min-height: 66px;
+      padding-left: 46px;
+      border-bottom: 1px solid var(--p09-line);
+    }
+
+    .p09-flow-stage::before {
+      position: absolute;
+      left: 10px;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--p09-blue);
+      border-radius: 50%;
+      background: rgba(218, 222, 225, 0.92);
+      content: "";
+    }
+
+    .p09-flow-title {
+      color: var(--p09-ink);
+      font-size: 25px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .p09-flow-detail {
+      color: var(--p09-muted);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .p09-flow-stage:last-child {
+      min-height: 82px;
+    }
+
+    .p09-flow-stage:last-child::before {
+      border-color: var(--p09-amber);
+    }
+
+    .p09-flow-stage:last-child .p09-flow-detail strong {
+      display: block;
+      margin-top: 4px;
+      color: #6e3d08;
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .p09-status-section {
+      position: absolute;
+      top: 250px;
+      left: 0;
+      width: 900px;
+    }
+
+    .p09-status-heading {
+      margin: 0 0 8px;
+      color: var(--p09-ink);
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .p09-status-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-bottom: 1px solid var(--p09-line);
+    }
+
+    .p09-status-row {
+      display: grid;
+      grid-template-columns: 120px 92px 1fr;
+      align-items: center;
+      min-height: 57px;
+      border-top: 1px solid var(--p09-line);
+    }
+
+    .p09-status-code {
+      color: var(--p09-blue);
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.04em;
+    }
+
+    .p09-status-row:nth-child(2) .p09-status-code {
+      color: var(--p09-amber);
+    }
+
+    .p09-status-name {
+      color: var(--p09-ink);
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .p09-status-description {
+      color: var(--p09-muted);
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p09-audit {
+      position: relative;
+      margin: 20px 0 0;
+      padding-top: 12px;
+      color: var(--p09-ink);
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-align: center;
+    }
+
+    .p09-audit::before {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      width: 1px;
+      height: 21px;
+      background: var(--p09-blue);
+      content: "";
+    }
+
+    .p09-audit::after {
+      position: absolute;
+      top: 2px;
+      left: calc(50% - 4px);
+      width: 8px;
+      height: 8px;
+      border-right: 1.5px solid var(--p09-blue);
+      border-bottom: 1.5px solid var(--p09-blue);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p09-conclusion {
+      top: 808px;
+      margin: 0;
+      color: var(--p09-ink);
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    /* P10：真实Demo视频接入前的外围文案与观看提示。 */
+    .slide-p10 {
+      --p10-main: #f3f2ee;
+      --p10-muted: #c5cad0;
+      --p10-blue: #9cbce5;
+      --p10-line: rgba(207, 210, 214, 0.32);
+      color: var(--p10-main);
+    }
+
+    .p10-header,
+    .p10-body,
+    .p10-conclusion {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+      width: 1400px;
+    }
+
+    .p10-header {
+      top: 58px;
+    }
+
+    .p10-header h1 {
+      margin: 0;
+      color: var(--p10-main);
+      font-size: 49px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p10-body {
+      top: 170px;
+      display: grid;
+      grid-template-columns: 970px 360px;
+      column-gap: 70px;
+      height: 560px;
+    }
+
+    .p10-video-slot {
+      position: relative;
+      min-height: 520px;
+      border: 1px solid rgba(156, 188, 229, 0.22);
+      background: transparent;
+    }
+
+    .p10-video-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin: 0;
+      padding-left: 17px;
+      border-left: 2px solid rgba(156, 188, 229, 0.62);
+      color: rgba(243, 242, 238, 0.62);
+      font-size: 21px;
+      font-weight: 500;
+      line-height: 1.35;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+
+    .p10-guide {
+      padding-top: 3px;
+    }
+
+    .p10-guide-title {
+      margin: 0 0 18px;
+      color: var(--p10-blue);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.03em;
+    }
+
+    .p10-guide-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-bottom: 1px solid var(--p10-line);
+    }
+
+    .p10-guide-item {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      padding: 18px 0 20px;
+      border-top: 1px solid var(--p10-line);
+    }
+
+    .p10-guide-index {
+      color: var(--p10-blue);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0.06em;
+    }
+
+    .p10-guide-copy h2 {
+      margin: 0 0 10px;
+      color: var(--p10-main);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p10-guide-copy p {
+      margin: 0;
+      color: var(--p10-muted);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.48;
+    }
+
+    .p10-conclusion {
+      top: 802px;
+      margin: 0;
+      color: var(--p10-main);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    /* P11：新证据关联旧判断、人工确认与Checkpoint留痕。 */
+    .slide-p11 {
+      --p11-main: #f3f2ee;
+      --p11-muted: #c6cbd1;
+      --p11-blue: #9ebfe8;
+      --p11-line: rgba(207, 210, 214, 0.38);
+      color: var(--p11-main);
+    }
+
+    .p11-header,
+    .p11-flow,
+    .p11-conclusion,
+    .p11-boundary {
+      position: absolute;
+      z-index: 2;
+    }
+
+    .p11-header {
+      top: 54px;
+      left: 100px;
+      width: 1400px;
+    }
+
+    .p11-kicker {
+      margin: 0 0 9px;
+      color: var(--p11-blue);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.3;
+      letter-spacing: 0.06em;
+    }
+
+    .p11-header h1 {
+      margin: 0;
+      color: var(--p11-main);
+      font-size: 49px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p11-flow {
+      top: 198px;
+      left: 475px;
+      width: 1025px;
+      height: 520px;
+    }
+
+    .p11-node-row {
+      display: grid;
+      grid-template-columns: repeat(3, 305px);
+      column-gap: 55px;
+    }
+
+    .p11-node {
+      position: relative;
+      min-height: 180px;
+      padding: 22px 22px 20px;
+      border-top: 1px solid rgba(207, 210, 214, 0.66);
+      border-bottom: 1px solid rgba(207, 210, 214, 0.22);
+      background: linear-gradient(180deg, rgba(6, 12, 18, 0.62), rgba(6, 12, 18, 0.36));
+    }
+
+    .p11-node:nth-child(2) {
+      border-top-color: rgba(158, 191, 232, 0.92);
+      background: linear-gradient(180deg, rgba(10, 24, 39, 0.72), rgba(8, 17, 27, 0.42));
+    }
+
+    .p11-node h2 {
+      margin: 0 0 17px;
+      color: var(--p11-main);
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p11-node:nth-child(2) h2 {
+      color: #d8e8fb;
+    }
+
+    .p11-node p {
+      margin: 0;
+      color: var(--p11-muted);
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .p11-arrow {
+      position: absolute;
+      top: 89px;
+      width: 43px;
+      border-top: 1.8px solid rgba(158, 191, 232, 0.76);
+    }
+
+    .p11-arrow::after {
+      position: absolute;
+      top: -5px;
+      right: -1px;
+      width: 9px;
+      height: 9px;
+      border-top: 1.8px solid rgba(158, 191, 232, 0.82);
+      border-right: 1.8px solid rgba(158, 191, 232, 0.82);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p11-arrow-one {
+      left: 311px;
+    }
+
+    .p11-arrow-two {
+      left: 671px;
+    }
+
+    .p11-human {
+      position: absolute;
+      top: 225px;
+      left: 720px;
+      width: 305px;
+      padding: 15px 0 16px;
+      border-top: 1px solid var(--p11-line);
+      border-bottom: 1px solid var(--p11-line);
+      text-align: center;
+    }
+
+    .p11-human::before {
+      position: absolute;
+      top: -45px;
+      left: 50%;
+      width: 1px;
+      height: 45px;
+      background: rgba(158, 191, 232, 0.72);
+      content: "";
+    }
+
+    .p11-human h2 {
+      margin: 0;
+      color: var(--p11-main);
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p11-checkpoint {
+      position: absolute;
+      top: 342px;
+      left: 360px;
+      width: 665px;
+      padding: 19px 24px 20px;
+      border-top: 1px solid rgba(158, 191, 232, 0.72);
+      border-bottom: 1px solid var(--p11-line);
+      background: linear-gradient(90deg, rgba(8, 17, 27, 0.28), rgba(8, 17, 27, 0.58));
+    }
+
+    .p11-checkpoint::before {
+      position: absolute;
+      top: -42px;
+      right: 152px;
+      width: 1px;
+      height: 42px;
+      background: rgba(158, 191, 232, 0.72);
+      content: "";
+    }
+
+    .p11-checkpoint h2 {
+      margin: 0 0 8px;
+      color: var(--p11-main);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p11-checkpoint p {
+      margin: 0;
+      color: var(--p11-muted);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.4;
+    }
+
+    .p11-boundary {
+      top: 690px;
+      left: 835px;
+      width: 665px;
+      margin: 0;
+      color: #b8bec5;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .p11-boundary strong {
+      color: #dce1e6;
+      font-weight: 600;
+    }
+
+    .p11-conclusion {
+      top: 805px;
+      left: 100px;
+      width: 1080px;
+      margin: 0;
+      color: var(--p11-main);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    /* P12：梅见案例由5个候选收敛为3项优先机制。 */
+    .slide-p12 {
+      --p12-ink: #14181d;
+      --p12-muted: #293038;
+      --p12-blue: #315f8c;
+      --p12-line: rgba(39, 47, 55, 0.48);
+      color: var(--p12-ink);
+    }
+
+    .p12-header,
+    .p12-main,
+    .p12-adjustment,
+    .p12-conclusion,
+    .p12-source {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+      width: 1400px;
+    }
+
+    .p12-header {
+      top: 58px;
+    }
+
+    .p12-header h1 {
+      margin: 0;
+      color: var(--p12-ink);
+      font-size: 49px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p12-main {
+      top: 185px;
+      height: 380px;
+    }
+
+    .p12-candidates,
+    .p12-convergence,
+    .p12-mechanisms {
+      position: absolute;
+    }
+
+    .p12-candidates {
+      top: 57px;
+      left: 18px;
+      width: 265px;
+    }
+
+    .p12-candidates .p12-candidate-number {
+      margin: 0;
+      color: var(--p12-ink);
+      font-size: 112px;
+      font-weight: 600;
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+    }
+
+    .p12-candidates h2 {
+      margin: 18px 0 9px;
+      color: var(--p12-ink);
+      font-size: 27px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p12-candidates p {
+      margin: 0;
+      color: var(--p12-muted);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.45;
+    }
+
+    .p12-convergence {
+      top: 112px;
+      left: 390px;
+      width: 265px;
+      text-align: center;
+    }
+
+    .p12-convergence h2 {
+      margin: 0 0 13px;
+      color: var(--p12-ink);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p12-convergence p {
+      margin: 0;
+      color: var(--p12-muted);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    .p12-arrow {
+      position: absolute;
+      top: 165px;
+      width: 74px;
+      border-top: 1.8px solid var(--p12-blue);
+    }
+
+    .p12-arrow::after {
+      position: absolute;
+      top: -5px;
+      right: -1px;
+      width: 9px;
+      height: 9px;
+      border-top: 1.8px solid var(--p12-blue);
+      border-right: 1.8px solid var(--p12-blue);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p12-arrow-one {
+      left: 295px;
+    }
+
+    .p12-arrow-two {
+      left: 675px;
+    }
+
+    .p12-mechanisms {
+      top: 0;
+      left: 775px;
+      display: grid;
+      row-gap: 16px;
+      width: 585px;
+    }
+
+    .p12-mechanism {
+      min-height: 104px;
+      padding: 20px 25px 18px;
+      border: 1px solid rgba(117, 126, 136, 0.36);
+      background: rgba(243, 244, 245, 0.82);
+    }
+
+    .p12-mechanism h2 {
+      margin: 0 0 7px;
+      color: var(--p12-ink);
+      font-size: 27px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .p12-mechanism p {
+      margin: 0;
+      color: var(--p12-muted);
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
+    .p12-adjustment {
+      top: 590px;
+      padding-top: 16px;
+      border-top: 1px solid var(--p12-line);
+    }
+
+    .p12-adjustment h2 {
+      margin: 0 0 12px;
+      color: #242a31;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p12-adjustment-row {
+      display: grid;
+      grid-template-columns: 160px 42px 1fr;
+      align-items: center;
+      min-height: 40px;
+      color: #2f353c;
+      font-size: 19px;
+      font-weight: 400;
+      line-height: 1.35;
+    }
+
+    .p12-adjustment-name {
+      color: #343a41;
+      font-weight: 600;
+    }
+
+    .p12-adjustment-arrow {
+      color: var(--p12-blue);
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .p12-conclusion {
+      top: 742px;
+      margin: 0;
+      color: var(--p12-ink);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .p12-source {
+      top: 826px;
+      margin: 0;
+      color: #2c3239;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.42;
+    }
+
+    /* P13：真人验证的两项同权重结果与项目场景安排。 */
+    .slide-p13 {
+      --p13-ink: #171c21;
+      --p13-muted: #394149;
+      --p13-soft: #555e67;
+      --p13-blue: #315f8c;
+      --p13-amber: #9a6426;
+      --p13-line: rgba(30, 37, 44, 0.34);
+      color: var(--p13-ink);
+    }
+
+    .p13-header,
+    .p13-results,
+    .p13-scenarios,
+    .p13-conclusion,
+    .p13-source {
+      position: absolute;
+      left: 470px;
+      z-index: 2;
+      width: 1030px;
+    }
+
+    .p13-header {
+      top: 56px;
+    }
+
+    .p13-header h1 {
+      margin: 0;
+      color: var(--p13-ink);
+      font-size: 48px;
+      font-weight: 600;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .p13-results {
+      top: 190px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 64px;
+    }
+
+    .p13-metric {
+      min-height: 268px;
+      padding: 22px 0 20px;
+      border-top: 1px solid var(--p13-line);
+      border-bottom: 1px solid var(--p13-line);
+    }
+
+    .p13-metric-value {
+      margin: 0 0 16px;
+      color: var(--p13-ink);
+      font-size: 92px;
+      font-weight: 600;
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+    }
+
+    .p13-metric-question {
+      margin: 0;
+      max-width: 430px;
+      color: var(--p13-ink);
+      font-size: 25px;
+      font-weight: 600;
+      line-height: 1.38;
+    }
+
+    .p13-metric-reading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0 0;
+      color: var(--p13-muted);
+      font-size: 19px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .p13-metric-reading::before {
+      width: 22px;
+      height: 2px;
+      background: var(--p13-blue);
+      content: "";
+      flex: 0 0 auto;
+    }
+
+    .p13-metric-risk .p13-metric-reading::before {
+      background: var(--p13-amber);
+    }
+
+    .p13-scenarios {
+      top: 520px;
+      left: 780px;
+      width: 720px;
+      padding-top: 14px;
+      border-top: 1px solid var(--p13-line);
+    }
+
+    .p13-scenarios > h2 {
+      margin: 0 0 17px;
+      color: var(--p13-soft);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.05em;
+    }
+
+    .p13-scenario-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: 0;
+    }
+
+    .p13-scenario {
+      min-height: 86px;
+      padding: 0 28px;
+      border-left: 1px solid rgba(30, 37, 44, 0.22);
+    }
+
+    .p13-scenario:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .p13-scenario-label {
+      margin: 0 0 8px;
+      color: var(--p13-soft);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .p13-scenario:first-child .p13-scenario-label {
+      color: var(--p13-blue);
+      font-weight: 700;
+    }
+
+    .p13-scenario-name {
+      margin: 0;
+      color: var(--p13-ink);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .p13-conclusion {
+      top: 690px;
+      left: 780px;
+      width: 720px;
+      margin: 0;
+      color: var(--p13-ink);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .p13-source {
+      top: 786px;
+      left: 780px;
+      width: 720px;
+      margin: 0;
+      color: #20262c;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.46;
+    }
+
+    .p13-source strong {
+      color: var(--p13-ink);
+      font-weight: 600;
+    }
+
+    /* P14：建议建设的长期认知、品牌母题与验证后扩张路径。 */
+    .slide-p14 {
+      --p14-ink: #171c21;
+      --p14-muted: #414950;
+      --p14-soft: #606870;
+      --p14-blue: #315f8c;
+      --p14-line: rgba(30, 37, 44, 0.30);
+      color: var(--p14-ink);
+    }
+
+    .p14-header,
+    .p14-mother,
+    .p14-mechanisms,
+    .p14-path,
+    .p14-expression,
+    .p14-source {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+      width: 900px;
+    }
+
+    .p14-header {
+      top: 56px;
+      width: 980px;
+    }
+
+    .p14-kicker,
+    .p14-section-label {
+      margin: 0;
+      color: var(--p14-blue);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.05em;
+    }
+
+    .p14-header h1 {
+      margin: 12px 0 0;
+      color: var(--p14-ink);
+      font-size: 52px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .p14-mother {
+      top: 190px;
+      padding-top: 17px;
+      border-top: 1px solid var(--p14-line);
+    }
+
+    .p14-mother-copy {
+      margin: 10px 0 0;
+      color: var(--p14-ink);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.42;
+    }
+
+    .p14-mechanisms {
+      top: 305px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid rgba(30, 37, 44, 0.20);
+      border-bottom: 1px solid rgba(30, 37, 44, 0.20);
+    }
+
+    .p14-mechanism {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      min-height: 62px;
+      padding: 17px 24px 15px;
+      border-left: 1px solid rgba(30, 37, 44, 0.18);
+    }
+
+    .p14-mechanism:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .p14-mechanism strong {
+      color: var(--p14-blue);
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .p14-mechanism span {
+      color: var(--p14-muted);
+      font-size: 19px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .p14-path {
+      top: 405px;
+      width: 980px;
+    }
+
+    .p14-path-grid {
+      display: grid;
+      grid-template-columns: 238px 122px 250px 88px 282px;
+      align-items: center;
+      margin-top: 15px;
+    }
+
+    .p14-path-stage {
+      min-height: 104px;
+      padding-top: 14px;
+      border-top: 2px solid rgba(49, 95, 140, 0.62);
+    }
+
+    .p14-path-stage:last-child {
+      border-top-color: rgba(30, 37, 44, 0.38);
+    }
+
+    .p14-stage-label {
+      margin: 0 0 8px;
+      color: var(--p14-soft);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p14-stage-name {
+      margin: 0;
+      color: var(--p14-ink);
+      font-size: 24px;
+      font-weight: 600;
+      line-height: 1.34;
+    }
+
+    .p14-path-connector {
+      position: relative;
+      height: 48px;
+    }
+
+    .p14-path-connector::before {
+      position: absolute;
+      top: 28px;
+      left: 14px;
+      right: 14px;
+      border-top: 1.5px solid rgba(49, 95, 140, 0.66);
+      content: "";
+    }
+
+    .p14-path-connector::after {
+      position: absolute;
+      top: 23px;
+      right: 14px;
+      width: 9px;
+      height: 9px;
+      border-top: 1.5px solid rgba(49, 95, 140, 0.78);
+      border-right: 1.5px solid rgba(49, 95, 140, 0.78);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p14-connector-label {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      color: var(--p14-blue);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.2;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .p14-expression {
+      top: 615px;
+      padding-top: 17px;
+      border-top: 1px solid var(--p14-line);
+    }
+
+    .p14-expression-copy {
+      margin: 10px 0 0;
+      color: var(--p14-ink);
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p14-source {
+      top: 805px;
+      width: 950px;
+      margin: 0;
+      color: #313940;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.48;
+    }
+
+    /* P15：实际决策变化、Business Case情境测算与企业试点待验证。 */
+    .slide-p15 {
+      --p15-ink: #171c21;
+      --p15-muted: #424a52;
+      --p15-soft: #626b74;
+      --p15-blue: #315f8c;
+      --p15-line: rgba(30, 37, 44, 0.28);
+      color: var(--p15-ink);
+    }
+
+    .p15-header,
+    .p15-columns,
+    .p15-conclusion,
+    .p15-source {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+      width: 1400px;
+    }
+
+    .p15-header {
+      top: 58px;
+    }
+
+    .p15-header h1 {
+      margin: 0;
+      color: var(--p15-ink);
+      font-size: 49px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p15-columns {
+      top: 170px;
+      display: grid;
+      grid-template-columns: 0.9fr 1.12fr 0.98fr;
+      column-gap: 48px;
+      min-height: 475px;
+    }
+
+    .p15-column {
+      position: relative;
+      padding: 18px 0 0;
+      border-top: 1.5px solid var(--p15-line);
+    }
+
+    .p15-column + .p15-column {
+      padding-left: 48px;
+      border-left: 1px solid rgba(30, 37, 44, 0.20);
+    }
+
+    .p15-label {
+      margin: 0;
+      color: var(--p15-blue);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .p15-metric {
+      margin: 24px 0 0;
+      color: var(--p15-ink);
+      font-size: 68px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.035em;
+    }
+
+    .p15-metric-caption {
+      margin: 10px 0 0;
+      color: var(--p15-muted);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p15-copy {
+      margin: 25px 0 0;
+      color: var(--p15-ink);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.52;
+    }
+
+    .p15-small {
+      margin: 19px 0 0;
+      color: var(--p15-muted);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .p15-formula {
+      margin: 22px 0 0;
+      padding: 15px 0 13px;
+      border-top: 1px solid rgba(30, 37, 44, 0.18);
+      border-bottom: 1px solid rgba(30, 37, 44, 0.18);
+      color: var(--p15-muted);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.56;
+    }
+
+    .p15-formula strong {
+      color: var(--p15-ink);
+      font-weight: 700;
+    }
+
+    .p15-assumption {
+      margin: 18px 0 0;
+      color: var(--p15-ink);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .p15-pilot-list {
+      margin: 25px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .p15-pilot-list li {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(30, 37, 44, 0.18);
+      color: var(--p15-muted);
+      font-size: 19px;
+      font-weight: 500;
+      line-height: 1.42;
+    }
+
+    .p15-pilot-list strong {
+      color: var(--p15-ink);
+      font-weight: 700;
+    }
+
+    .p15-conclusion {
+      top: 700px;
+      margin: 0;
+      color: var(--p15-ink);
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .p15-source {
+      top: 790px;
+      margin: 0;
+      color: #343c44;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.46;
+    }
+
+    /* P16：企业试点的两条独立验证路径与市场实验决策。 */
+    .slide-p16 {
+      --p16-main: #f3f2ee;
+      --p16-secondary: #cfd2d6;
+      --p16-muted: #969da5;
+      --p16-blue: #6ea8ff;
+      --p16-line: rgba(243, 242, 238, 0.22);
+      color: var(--p16-main);
+    }
+
+    .p16-header,
+    .p16-lede,
+    .p16-paths,
+    .p16-decisions,
+    .p16-conclusion,
+    .p16-source {
+      position: absolute;
+      left: 94px;
+      z-index: 2;
+      width: 826px;
+    }
+
+    .p16-header {
+      top: 50px;
+      width: 1120px;
+    }
+
+    .p16-eyebrow {
+      margin-bottom: 10px;
+      color: var(--p16-blue);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0.08em;
+    }
+
+    .p16-header h1 {
+      color: var(--p16-main);
+      font-size: 46px;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.015em;
+    }
+
+    .p16-lede {
+      top: 150px;
+      color: var(--p16-secondary);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .p16-paths {
+      top: 225px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 42px;
+    }
+
+    .p16-path {
+      min-width: 0;
+      padding-top: 14px;
+      border-top: 2px solid var(--p16-line);
+    }
+
+    .p16-path--brand {
+      border-top-color: rgba(110, 168, 255, 0.88);
+    }
+
+    .p16-path-label {
+      color: var(--p16-blue);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: 0.05em;
+    }
+
+    .p16-path h2 {
+      margin: 7px 0 0;
+      color: var(--p16-main);
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .p16-context {
+      margin-top: 10px;
+      color: var(--p16-secondary);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    .p16-context strong {
+      margin-right: 8px;
+      color: var(--p16-muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .p16-options {
+      margin-top: 15px;
+      border-top: 1px solid var(--p16-line);
+    }
+
+    .p16-option {
+      display: grid;
+      grid-template-columns: 116px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--p16-line);
+    }
+
+    .p16-option strong {
+      color: var(--p16-main);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .p16-option--accent strong {
+      color: var(--p16-blue);
+    }
+
+    .p16-option span {
+      color: var(--p16-secondary);
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .p16-observe {
+      margin-top: 13px;
+      color: var(--p16-main);
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .p16-observe strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--p16-muted);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .p16-decisions {
+      top: 555px;
+    }
+
+    .p16-decisions-title {
+      color: var(--p16-muted);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: 0.06em;
+    }
+
+    .p16-decision-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 9px;
+      border-top: 1px solid var(--p16-line);
+    }
+
+    .p16-decision {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 8px;
+      padding: 9px 15px 9px 0;
+      border-bottom: 1px solid var(--p16-line);
+      color: var(--p16-secondary);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .p16-decision:nth-child(even) {
+      padding-left: 18px;
+      border-left: 1px solid var(--p16-line);
+    }
+
+    .p16-decision strong {
+      color: var(--p16-main);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .p16-decision--attack strong {
+      color: var(--p16-blue);
+    }
+
+    .p16-decision-note {
+      margin-top: 8px;
+      color: var(--p16-muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .p16-conclusion {
+      top: 741px;
+      padding-top: 14px;
+      border-top: 1px solid var(--p16-line);
+      color: var(--p16-main);
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p16-source {
+      top: 828px;
+      color: var(--p16-muted);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* P17：共同判断底座向品牌迁移与任务迁移分支。 */
+    .slide-p17 {
+      --p17-main: #f3f2ee;
+      --p17-muted: #c7cbd0;
+      --p17-soft: #989fa7;
+      --p17-blue: #9abce8;
+      --p17-line: rgba(207, 210, 214, 0.40);
+      color: var(--p17-main);
+    }
+
+    .p17-header,
+    .p17-diagram,
+    .p17-conditions,
+    .p17-conclusion,
+    .p17-source {
+      position: absolute;
+      left: 100px;
+      z-index: 2;
+      width: 800px;
+    }
+
+    .p17-header {
+      top: 58px;
+      width: 900px;
+    }
+
+    .p17-header h1 {
+      margin: 0;
+      color: var(--p17-main);
+      font-size: 50px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p17-diagram {
+      top: 170px;
+      height: 410px;
+    }
+
+    .p17-section-label {
+      margin: 0 0 13px;
+      color: var(--p17-blue);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0.05em;
+    }
+
+    .p17-foundation-flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--p17-line);
+      border-bottom: 1px solid var(--p17-line);
+    }
+
+    .p17-foundation-step {
+      position: relative;
+      margin: 0;
+      padding: 19px 18px 18px 0;
+      color: var(--p17-main);
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .p17-foundation-step:not(:last-child)::after {
+      position: absolute;
+      top: 27px;
+      right: 16px;
+      width: 8px;
+      height: 8px;
+      border-top: 1.5px solid var(--p17-blue);
+      border-right: 1.5px solid var(--p17-blue);
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .p17-branch-lines {
+      position: absolute;
+      top: 116px;
+      left: 0;
+      width: 800px;
+      height: 74px;
+      border-top: 0;
+    }
+
+    .p17-branch-lines::before {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 1px;
+      height: 29px;
+      background: var(--p17-blue);
+      content: "";
+    }
+
+    .p17-branch-lines::after {
+      position: absolute;
+      top: 28px;
+      left: 190px;
+      width: 420px;
+      border-top: 1px solid var(--p17-blue);
+      content: "";
+    }
+
+    .p17-paths {
+      position: absolute;
+      top: 190px;
+      left: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 60px;
+      width: 800px;
+    }
+
+    .p17-path {
+      position: relative;
+      min-height: 205px;
+      padding-top: 18px;
+      border-top: 1px solid var(--p17-line);
+    }
+
+    .p17-path::before {
+      position: absolute;
+      top: -42px;
+      left: 50%;
+      width: 1px;
+      height: 42px;
+      background: var(--p17-blue);
+      content: "";
+    }
+
+    .p17-path h2 {
+      margin: 0 0 10px;
+      color: var(--p17-main);
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .p17-path-kicker {
+      margin: 0 0 14px;
+      color: var(--p17-soft);
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.3;
+    }
+
+    .p17-path-copy {
+      margin: 0;
+      color: var(--p17-muted);
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.6;
+    }
+
+    .p17-task-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 0;
+      margin: 0;
+      color: var(--p17-muted);
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    .p17-task-list span {
+      padding: 0 13px;
+      border-left: 1px solid rgba(207, 210, 214, 0.30);
+    }
+
+    .p17-task-list span:first-child,
+    .p17-task-list span:nth-child(4) {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .p17-conditions {
+      top: 605px;
+      padding: 15px 0 14px;
+      border-top: 1px solid var(--p17-line);
+      border-bottom: 1px solid var(--p17-line);
+    }
+
+    .p17-condition-row {
+      display: grid;
+      grid-template-columns: 0.9fr 1.55fr 1.15fr;
+      margin-top: 10px;
+    }
+
+    .p17-condition-row span {
+      padding: 0 18px;
+      border-left: 1px solid rgba(207, 210, 214, 0.30);
+      color: var(--p17-main);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .p17-condition-row span:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+
+    .p17-conclusion {
+      top: 738px;
+      margin: 0;
+      color: var(--p17-main);
+      font-size: 34px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .p17-source {
+      top: 821px;
+      margin: 0;
+      color: var(--p17-muted);
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* P18：与封面呼应的双重交付收尾页。 */
+    .slide-p18 {
+      --p18-main: #f3f2ee;
+      --p18-secondary: #cfd2d6;
+      color: var(--p18-main);
+    }
+
+    .p18-header,
+    .p18-deliverables,
+    .p18-closing,
+    .p18-signature {
+      position: absolute;
+      z-index: 2;
+    }
+
+    .p18-header {
+      top: 150px;
+      left: 380px;
+      width: 900px;
+    }
+
+    .p18-header h1 {
+      margin: 0;
+      color: var(--p18-main);
+      font-size: 68px;
+      font-weight: 600;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .p18-deliverables {
+      top: 385px;
+      left: 380px;
+      display: grid;
+      grid-template-columns: 390px 500px;
+      column-gap: 80px;
+      width: 970px;
+    }
+
+    .p18-deliverable {
+      padding-top: 18px;
+      border-top: 1px solid rgba(243, 242, 238, 0.30);
+    }
+
+    .p18-deliverable-label {
+      margin: 0 0 14px;
+      color: var(--p18-secondary);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.35;
+      letter-spacing: 0.04em;
+    }
+
+    .p18-deliverable-copy {
+      margin: 0;
+      color: var(--p18-main);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    .p18-closing {
+      top: 670px;
+      left: 790px;
+      width: 650px;
+      margin: 0;
+      color: var(--p18-main);
+      font-size: 29px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .p18-signature {
+      top: 796px;
+      left: 790px;
+      margin: 0;
+      color: var(--p18-secondary);
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+
+    /* P02：可编辑的三阶段流程。字号按1600×900画布设置，放大到1920×1080后对应用户给定范围。 */
+    .slide-p02 {
+      --p02-main: #20242a;
+      --p02-support: #343b44;
+      --p02-node: rgba(243, 244, 245, 0.78);
+      --p02-border: rgba(32, 36, 42, 0.34);
+      --p02-line: #4f5963;
+      color: var(--p02-main);
+    }
+
+    .p02-header,
+    .p02-flow,
+    .p02-footer {
+      position: absolute;
+      left: 128px;
+      width: 1136px;
+      z-index: 2;
+    }
+
+    .p02-header {
+      top: 72px;
+    }
+
+    .p02-kicker {
+      color: var(--p02-support);
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .p02-header h1 {
+      margin-top: 9px;
+      color: var(--p02-main);
+      font-size: 50px;
+      font-weight: 600;
+      line-height: 1.14;
+      letter-spacing: 0;
+    }
+
+    .p02-flow {
+      top: 188px;
+      height: 430px;
+      overflow: visible;
+    }
+
+    .p02-stage-grid {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 48px;
+    }
+
+    .p02-stage-group h2 {
+      margin: 0;
+      color: var(--p02-main);
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 38px;
+      letter-spacing: 0;
+    }
+
+    .p02-stage-group ol {
+      display: grid;
+      grid-template-rows: 76px 76px 96px;
+      gap: 20px;
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .p02-node {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+      padding: 9px 16px 8px;
+      border: 1px solid var(--p02-border);
+      border-radius: 2px;
+      background: var(--p02-node);
+      box-shadow: none;
+    }
+
+    .p02-node-main {
+      color: var(--p02-main);
+      font-size: 25px;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: 0;
+      white-space: normal;
+    }
+
+    .p02-node small {
+      display: block;
+      margin-top: 6px;
+      color: var(--p02-support);
+      font-size: 19.5px;
+      font-weight: 500;
+      line-height: 1.24;
+      letter-spacing: 0;
+      white-space: normal;
+    }
+
+    .p02-connectors {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      width: 1136px;
+      height: 430px;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .p02-route-label,
+    .p02-feedback-label {
+      position: absolute;
+      z-index: 4;
+      color: var(--p02-support);
+      background: transparent;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .p02-pass-label {
+      top: 160px;
+      left: 728px;
+      width: 42px;
+      padding: 0;
+      text-align: right;
+    }
+
+    .p02-fail-label {
+      top: 348px;
+      left: 602px;
+      width: 286px;
+      padding: 0;
+      text-align: left;
+    }
+
+    .p02-feedback-label {
+      top: 388px;
+      left: 190px;
+      width: 500px;
+      padding: 0;
+      text-align: left;
+    }
+
+    .p02-question-zone {
+      position: absolute;
+      top: 656px;
+      left: 128px;
+      z-index: 2;
+      width: 760px;
+      height: 122px;
+      padding-top: 0;
+      border: 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 220ms ease, transform 220ms ease, visibility 220ms linear;
+    }
+
+    .slide-p02[data-step="2"] .p02-question-zone {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .p02-question-zone h2 {
+      margin: 0;
+      color: #f3f2ee;
+      font-size: 31.333px;
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .p02-question-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 36px;
+      margin-top: 19px;
+    }
+
+    .p02-question-list p {
+      color: #cfd2d6;
+      font-size: 23px;
+      font-weight: 500;
+      line-height: 1.32;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .p02-footer {
+      top: 842px;
+      color: #cfd2d6;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.38;
+      letter-spacing: 0;
+    }
+
+    /* P02上的控制条默认避让画面，仅在底部唤出或键盘操作后短暂出现。 */
+    body.p02-active .controls {
+      transform: translateY(6px) scale(0.86);
+      transform-origin: right bottom;
+      background: rgba(5, 7, 10, 0.78);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    body.p02-active .controls.is-idle {
+      transform: translateY(16px) scale(0.82);
+    }
+
+    /* P03：横向四阶段主干与下挂断点，全部保持透明、可编辑。 */
+    .slide-p03 {
+      --p03-title: #f3f2ee;
+      --p03-text: #cfd2d6;
+      --p03-line: rgba(207, 210, 214, 0.72);
+      --p03-amber: #c58a3d;
+      color: var(--p03-title);
+    }
+
+    .p03-header,
+    .p03-flow,
+    .p03-conclusion,
+    .p03-footer {
+      position: absolute;
+      left: 128px;
+      width: 1344px;
+      z-index: 2;
+    }
+
+    .p03-header {
+      top: 82px;
+    }
+
+    .p03-header h1 {
+      margin: 0;
+      color: var(--p03-title);
+      font-size: 50px;
+      font-weight: 600;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    .p03-flow {
+      top: 232px;
+      height: 384px;
+    }
+
+    .p03-stage-row,
+    .p03-break-row {
+      position: absolute;
+      inset-inline: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .p03-stage-row {
+      top: 0;
+    }
+
+    .p03-stage {
+      color: var(--p03-title);
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.3;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .p03-connectors {
+      position: absolute;
+      inset: 0;
+      width: 1344px;
+      height: 354px;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .p03-break-row {
+      top: 158px;
+      align-items: start;
+    }
+
+    .p03-breakpoint {
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .p03-breakpoint .p03-number {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--p03-amber);
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: 0.08em;
+    }
+
+    .p03-breakpoint h2 {
+      margin: 0;
+      color: #d9dadd;
+      font-size: 26px;
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .p03-breakpoint p {
+      margin-top: 10px;
+      color: var(--p03-text);
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.35;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .p03-breakpoint .p03-cost {
+      display: block;
+      margin-top: 13px;
+      color: var(--p03-amber);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .p03-breakpoint:nth-child(3) h2 {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .p03-conclusion {
+      top: 730px;
+      color: var(--p03-title);
+      font-size: 31px;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .p03-footer {
+      top: 842px;
+      color: var(--p03-text);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .p02-question-zone {
+        transform: none;
+        transition: none;
+      }
+    }
+
+    .controls {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      background: rgba(5, 7, 10, 0.9);
+      backdrop-filter: blur(10px);
+      transition: opacity 180ms ease;
+    }
+
+    .controls.is-idle {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .controls button {
+      min-width: 48px;
+      min-height: 42px;
+      padding: 8px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--secondary);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .controls button:hover,
+    .controls button:focus-visible {
+      color: var(--title);
+      border-color: rgba(255, 255, 255, 0.36);
+    }
+
+    .controls button:disabled {
+      opacity: 0.34;
+      cursor: default;
+    }
+
+    .page-status {
+      min-width: 74px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .keyboard-help {
+      position: fixed;
+      bottom: 22px;
+      left: 22px;
+      z-index: 18;
+      color: rgba(255, 255, 255, 0.46);
+      font-size: 12px;
+      transition: opacity 180ms ease;
+    }
+
+    .keyboard-help.is-idle {
+      opacity: 0;
+    }
+
+    .overview {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      overflow: auto;
+      padding: 34px clamp(20px, 4vw, 64px) 64px;
+      background: rgba(5, 7, 10, 0.97);
+    }
+
+    .overview-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .overview-header h2 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      font-weight: 600;
+    }
+
+    .overview-header p {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .overview-close {
+      min-width: 74px;
+      min-height: 44px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--title);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 22px;
+    }
+
+    .thumb {
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      color: var(--title);
+      background: var(--panel);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .thumb:hover,
+    .thumb:focus-visible,
+    .thumb[aria-current="true"] {
+      border-color: rgba(255, 255, 255, 0.48);
+    }
+
+    .thumb img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      background: #07090b;
+    }
+
+    .thumb-meta {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 13px 14px 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.11);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .thumb-meta b {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thumb-meta small {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .notes-panel {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      bottom: 78px;
+      z-index: 35;
+      width: min(430px, calc(100vw - 36px));
+      padding: 22px;
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--secondary);
+      background: rgba(5, 7, 10, 0.96);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .notes-panel header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .notes-panel h2 {
+      margin: 0;
+      color: var(--title);
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .notes-panel button {
+      min-width: 54px;
+      min-height: 38px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--secondary);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .notes-content {
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    .notes-content strong {
+      color: var(--title);
+    }
+
+    @media (max-width: 760px) {
+      .controls {
+        right: 8px;
+        bottom: 8px;
+      }
+
+      .controls button {
+        min-width: 42px;
+        padding: 7px 9px;
+      }
+
+      .keyboard-help {
+        display: none;
+      }
+
+      .overview-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      html,
+      body {
+        overflow: visible;
+        background: white;
+      }
+
+      .deck,
+      .stage {
+        position: static;
+        transform: none !important;
+      }
+
+      .slide {
+        position: relative;
+        display: block;
+        width: var(--stage-width);
+        height: var(--stage-height);
+        break-after: page;
+      }
+
+      .controls,
+      .keyboard-help,
+      .overview,
+      .notes-panel {
+        display: none !important;
+      }
+
+      .p02-question-zone {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#stage">跳到演示画布</a>
+
+  <div class="deck" id="deck">
+    <main class="stage" id="stage" aria-live="polite">
+      <!-- ================= P01 可编辑封面 START ================= -->
+      <section class="slide slide-cover is-active" id="p01" data-page="P01" data-title="开场" data-time="15秒" style="--slide-bg: url('images/p01-opening-blue-light-v01.png')" aria-labelledby="p01-title">
+        <!-- 【P01 命题】只修改标签中间的文字 -->
+        <div class="p01-brief">
+          <span data-edit="P01_BRIEF_LABEL">瓶子星球命题</span>
+          <p data-edit="P01_BRIEF_BODY">梅见如何成为独一无二的梅见</p>
+        </div>
+
+        <!-- 【P01 项目名】两行分别修改，不要删除中间的 br -->
+        <div class="p01-title-block">
+          <h1 id="p01-title"><span data-edit="P01_TITLE_LINE1">梅见品牌叙事</span><br><span data-edit="P01_TITLE_LINE2">智能决策系统</span></h1>
+          <p class="p01-lead" data-edit="P01_LEAD">从市场证据出发，提出方向、主动检验、持续修正。</p>
+        </div>
+
+        <!-- 【P01 署名】队名和成员分开修改 -->
+        <p class="p01-signature"><span data-edit="P01_TEAM">知行合一队</span><span data-edit="P01_MEMBERS">吴沛鸿 · 王腾昊</span></p>
+
+        <aside class="notes-source" hidden>
+          <strong>页面目标：</strong>15秒内说清项目名称和研究任务。<br>
+          <strong>开场口播：</strong>“广告火了，品牌就赢了吗？”只口播，不在封面重复显示。<br>
+          <strong>画面边界：</strong>封面不提前宣布最终品牌答案，也不展示尚未核验的数据或系统结果。
+        </aside>
+      </section>
+      <!-- ================= P01 可编辑封面 END ================= -->
+
+      <!-- ================= P02 2025年消费环境 START ================= -->
+      <section class="slide slide-market-context" id="p02" data-page="P02" data-title="新酒饮已经进入认知竞争阶段" data-time="20秒" style="--slide-bg: url('images/p14-realized-value-v01.png')" aria-labelledby="p02-market-title">
+        <header class="market-context-header">
+          <p class="market-context-kicker" data-edit="P02_KICKER">项目判断｜2025年消费环境</p>
+          <h1 id="p02-market-title" data-edit="P02_TITLE">新酒饮已经进入认知竞争阶段</h1>
+          <p class="market-context-subtitle" data-edit="P02_SUBTITLE">消费仍在增长，但价格水平承压</p>
+        </header>
+
+        <div class="market-context-grid" aria-label="2025年消费环境三项数据">
+          <section class="market-context-item market-card--blue">
+            <span class="market-card-index" aria-hidden="true">01</span>
+            <h2 data-edit="P02_CARD_1_TITLE">全国居民人均消费支出</h2>
+            <strong class="market-metric-value" data-edit="P02_CARD_1_VALUE">29,476元</strong>
+            <p class="market-metric-compare" data-edit="P02_CARD_1_COMPARE">同比 +4.4%</p>
+            <p class="market-metric-insight" data-edit="P02_CARD_1_INSIGHT">整体消费仍增长</p>
+          </section>
+          <section class="market-context-item market-card--slate">
+            <span class="market-card-index" aria-hidden="true">02</span>
+            <h2 data-edit="P02_CARD_2_TITLE">食品烟酒消费支出</h2>
+            <strong class="market-metric-value" data-edit="P02_CARD_2_VALUE">8,631元</strong>
+            <p class="market-metric-compare" data-edit="P02_CARD_2_COMPARE">同比 +2.6%</p>
+            <p class="market-metric-insight" data-edit="P02_CARD_2_INSIGHT">增速低于整体消费</p>
+          </section>
+          <section class="market-context-item market-card--amber">
+            <span class="market-card-index" aria-hidden="true">03</span>
+            <h2 data-edit="P02_CARD_3_TITLE">食品烟酒消费价格</h2>
+            <strong class="market-metric-value" data-edit="P02_CARD_3_VALUE">-0.7%</strong>
+            <p class="market-metric-insight" data-edit="P02_CARD_3_INSIGHT">价格水平承压</p>
+          </section>
+        </div>
+
+        <p class="market-context-transition" data-edit="P02_TRANSITION">相关消费仍在增长，但增速有限、价格承压，<br>品牌需要建立比价格更稳定的选择理由。</p>
+        <p class="market-context-footer" data-edit="P02_FOOTNOTE">数据来源：国家统计局《2025年居民收入和消费支出情况》《2025年国民经济和社会发展统计公报》。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>消费仍在增长，但食品烟酒支出增速低于整体消费，价格水平同时承压；品牌需要建立比价格更稳定的选择理由。<br>
+          <strong>讲述内容：</strong>2025年，全国居民人均消费支出同比增长4.4%，食品烟酒消费支出增长2.6%，食品烟酒消费价格下降0.7%。市场不是停止增长，而是进入更难依靠价格和流量获得稳定选择的阶段。<br>
+          <strong>数据口径：</strong>本页数字与来源按项目团队提供的国家统计局材料填写。<br>
+          <strong>衔接：</strong>下一页回到企业通常怎样选择并放大内容。
+        </aside>
+      </section>
+      <!-- ================= P02 2025年消费环境 END ================= -->
+
+      <!-- ================= 新P03 原传统流程 START ================= -->
+      <section class="slide slide-p02" id="p03" data-page="P03" data-title="传统流程：企业怎样选择和放大内容？" data-time="20秒" data-step="1" style="--slide-bg: url('images/p02-traditional-process-layers-v01.png')" aria-labelledby="p02-title">
+        <header class="p02-header">
+          <p class="p02-kicker" data-edit="P02_KICKER">从创意到决策</p>
+          <h1 id="p02-title" data-edit="P02_TITLE">品牌通常怎样找到值得放大的内容？</h1>
+        </header>
+
+        <div class="p02-flow" aria-label="传统内容种草与投放流程">
+          <div class="p02-stage-grid">
+            <section class="p02-stage-group" aria-labelledby="p02-stage-1">
+              <h2 id="p02-stage-1" data-edit="P02_STAGE_1">01 找到目标人群</h2>
+              <ol>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S1_STEP_1">明确目标、产品与预算</span></li>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S1_STEP_2">调研需求，选择目标人群</span></li>
+                <li class="p02-node">
+                  <span class="p02-node-main" data-edit="P02_S1_STEP_3">形成场景与内容方向</span>
+                  <small data-edit="P02_S1_NOTE">评审主张与产品事实</small>
+                </li>
+              </ol>
+            </section>
+
+            <section class="p02-stage-group" aria-labelledby="p02-stage-2">
+              <h2 id="p02-stage-2" data-edit="P02_STAGE_2">02 内容与达人赛马</h2>
+              <ol>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S2_STEP_1">匹配KOC／KOL，制作内容</span></li>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S2_STEP_2">多组内容小预算赛马</span></li>
+                <li class="p02-node">
+                  <span class="p02-node-main" data-edit="P02_S2_STEP_3">评估人群、内容与达人组合</span>
+                  <small data-edit="P02_S2_NOTE">依据预设指标与观察窗口</small>
+                </li>
+              </ol>
+            </section>
+
+            <section class="p02-stage-group" aria-labelledby="p02-stage-3">
+              <h2 id="p02-stage-3" data-edit="P02_STAGE_3">03 放量与效果验证</h2>
+              <ol>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S3_STEP_1">分阶段追加预算与复测</span></li>
+                <li class="p02-node"><span class="p02-node-main" data-edit="P02_S3_STEP_2">承接搜索、进店与购买</span></li>
+                <li class="p02-node">
+                  <span class="p02-node-main" data-edit="P02_S3_STEP_3">复盘经营结果与品牌认知</span>
+                  <small data-edit="P02_S3_NOTE">承接准备前置，放量期间持续监测</small>
+                </li>
+              </ol>
+            </section>
+          </div>
+
+          <svg class="p02-connectors" viewBox="0 0 1136 430" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <marker id="p02-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                <path d="M 0 0 L 8 4 L 0 8 Z" fill="#4F5963"></path>
+              </marker>
+            </defs>
+            <g fill="none" stroke="#4F5963" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" marker-end="url(#p02-arrow)">
+              <path d="M 173.333 128 V 148"></path>
+              <path d="M 173.333 224 V 244"></path>
+              <path d="M 568 128 V 148"></path>
+              <path d="M 568 224 V 244"></path>
+              <path d="M 962.667 128 V 148"></path>
+              <path d="M 962.667 224 V 244"></path>
+              <path d="M 346.667 292 H 370.667 V 90 H 394.667"></path>
+              <path d="M 741.333 292 H 780 V 90 H 789.333"></path>
+              <path d="M 568 340 V 362 H 590"></path>
+            </g>
+            <path d="M 962.667 340 V 416 H -24 V 90 H 0" fill="none" stroke="#4F5963" stroke-width="2.2" stroke-dasharray="8 8" stroke-linecap="square" stroke-linejoin="miter" marker-end="url(#p02-arrow)"></path>
+          </svg>
+
+          <span class="p02-route-label p02-pass-label" data-edit="P02_PASS">达标</span>
+          <span class="p02-route-label p02-fail-label" data-edit="P02_FAIL">未达标：修正重测／停止</span>
+          <span class="p02-feedback-label" data-edit="P02_FEEDBACK">反馈回流：调整目标人群、内容方向与预算</span>
+        </div>
+
+        <section class="p02-question-zone" id="p02-question-zone" aria-labelledby="p02-question-title" aria-hidden="true">
+          <h2 id="p02-question-title" data-edit="P02_CORE_QUESTION">跑赢的是素材，还是品牌选择理由？</h2>
+          <div class="p02-question-list">
+            <p data-edit="P02_QUESTION_1">消费者真的需要？</p>
+            <p data-edit="P02_QUESTION_2">竞品能否替换？</p>
+            <p data-edit="P02_QUESTION_3">品牌能否兑现？</p>
+          </div>
+        </section>
+
+        <p class="p02-footer" data-edit="P02_FOOTNOTE">常见内容种草与投放流程示意，非所有企业的统一做法；<br>底部三问为本项目审查视角。</p>
+
+        <aside class="notes-source" hidden>
+          “节目里有个‘半个月饼’的提案，用半个到完整表达等待团圆。<br>
+          故事讲通了，消费者会因此多买吗？<br>
+          企业通常研究人群、找达人做内容、小预算赛马，再逐步放量。<br>
+          我们追问的是：跑赢的是素材，还是品牌选择理由？”<br><br>
+          月饼案例仅为讨论引子。不得添加该案例未经核实的销量、投放收益或失败结果；不得断言原团队没有调研或验证。<br>
+          <strong>排练：</strong>本页约20秒，不逐个读九个步骤。
+        </aside>
+      </section>
+      <!-- ================= 新P03 原传统流程 END ================= -->
+
+      <!-- ================= 新P04 四个断点 START ================= -->
+      <section class="slide slide-p03" id="p04" data-page="P04" data-title="四个断点：判断与成本在哪里失控？" data-time="20秒" style="--slide-bg: url('images/p03-four-breaks-v01.png')" aria-labelledby="p03-title">
+        <header class="p03-header">
+          <h1 id="p03-title" data-edit="P03_TITLE">流程在继续，判断可能在这里断开</h1>
+        </header>
+
+        <div class="p03-flow" aria-label="品牌方向形成与投放决策的四阶段断点">
+          <div class="p03-stage-row">
+            <div class="p03-stage" data-edit="P03_STAGE_1">消费者反馈</div>
+            <div class="p03-stage" data-edit="P03_STAGE_2">提出品牌方向</div>
+            <div class="p03-stage" data-edit="P03_STAGE_3">内容投放结果</div>
+            <div class="p03-stage" data-edit="P03_STAGE_4">下一轮决策</div>
+          </div>
+
+          <svg class="p03-connectors" viewBox="0 0 1344 354" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <marker id="p03-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 Z" fill="#CFD2D6"></path>
+              </marker>
+            </defs>
+            <g fill="none" stroke="rgba(207,210,214,0.72)" stroke-width="2" stroke-linecap="square" marker-end="url(#p03-arrow)">
+              <path d="M 206 80 H 466"></path>
+              <path d="M 542 80 H 802"></path>
+              <path d="M 878 80 H 1138"></path>
+            </g>
+            <g fill="none" stroke="rgba(207,210,214,0.72)" stroke-width="1.5" stroke-linecap="square">
+              <path d="M 168 92 V 148"></path>
+              <path d="M 504 92 V 148"></path>
+              <path d="M 840 92 V 148"></path>
+              <path d="M 1176 92 V 148"></path>
+            </g>
+            <g fill="#CFD2D6">
+              <circle cx="168" cy="80" r="4"></circle>
+              <circle cx="504" cy="80" r="4"></circle>
+              <circle cx="840" cy="80" r="4"></circle>
+              <circle cx="1176" cy="80" r="4"></circle>
+            </g>
+          </svg>
+
+          <div class="p03-break-row">
+            <section class="p03-breakpoint">
+              <span class="p03-number" data-edit="P03_BREAK_NUMBER_1">01</span>
+              <h2 data-edit="P03_BREAK_TITLE_1">依据不统一</h2>
+              <p data-edit="P03_BREAK_TEXT_1">哪些反馈足以支持方向？</p>
+              <span class="p03-cost" data-edit="P03_BREAK_COST_1">方向反复讨论</span>
+            </section>
+            <section class="p03-breakpoint">
+              <span class="p03-number" data-edit="P03_BREAK_NUMBER_2">02</span>
+              <h2 data-edit="P03_BREAK_TITLE_2">缺少反证检查</h2>
+              <p data-edit="P03_BREAK_TEXT_2">换成竞品是否仍成立？</p>
+              <span class="p03-cost" data-edit="P03_BREAK_COST_2">低潜方向进入制作与投流</span>
+            </section>
+            <section class="p03-breakpoint">
+              <span class="p03-number" data-edit="P03_BREAK_NUMBER_3">03</span>
+              <h2 data-edit="P03_BREAK_TITLE_3">素材赢，未必品牌赢</h2>
+              <p data-edit="P03_BREAK_TEXT_3">数据变好，因为什么？</p>
+              <span class="p03-cost" data-edit="P03_BREAK_COST_3">放量依据可能失准</span>
+            </section>
+            <section class="p03-breakpoint">
+              <span class="p03-number" data-edit="P03_BREAK_NUMBER_4">04</span>
+              <h2 data-edit="P03_BREAK_TITLE_4">复盘未关联原假设</h2>
+              <p data-edit="P03_BREAK_TEXT_4">哪个判断错了，留下了吗？</p>
+              <span class="p03-cost" data-edit="P03_BREAK_COST_4">下一轮可能重复试错</span>
+            </section>
+          </div>
+        </div>
+
+        <p class="p03-conclusion" data-edit="P03_CONCLUSION">企业需要在投入预算前，知道哪个方向更值得验证。</p>
+        <p class="p03-footer" data-edit="P03_FOOTNOTE">常见决策风险示意，并非所有企业均存在上述缺口。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>页面任务：</strong>用四个断点说明传统流程持续运行时，方向判断可能在哪里丢失。<br>
+          <strong>结论：</strong>企业需要在投入预算前，知道哪个方向更值得验证。<br>
+          <strong>口播边界：</strong>需要前移的是方向判断，而不是取消市场验证。
+        </aside>
+      </section>
+      <!-- ================= 新P04 四个断点 END ================= -->
+
+      <!-- ================= P05 梅见市场发现 START ================= -->
+      <section class="slide slide-p05" id="p05" data-page="P05" data-title="从适合什么场景，走向解决什么选择问题" data-time="25秒" style="--slide-bg: url('images/p04-market-crosscheck-v01.png')" aria-labelledby="p05-title">
+        <header class="p05-header">
+          <h1 id="p05-title" data-edit="P05_TITLE">从“适合什么场景”，走向“解决什么选择问题”</h1>
+        </header>
+
+        <div class="p05-findings" aria-label="梅见市场分析的三个具体发现">
+          <section class="p05-finding">
+            <p class="p05-category" data-edit="P05_CATEGORY_1">购买者反馈</p>
+            <h2 data-edit="P05_FINDING_1">产品体验分化，选择仍有障碍</h2>
+            <p class="p05-explanation" data-edit="P05_EXPLANATION_1">口味与入口体验存在不同反馈；<br>饮法既可能改善体验，也可能增加选择门槛。</p>
+            <p class="p05-evidence" data-edit="P05_EVIDENCE_1">依据：56条梅见产品体验＋44条竞品产品体验</p>
+          </section>
+
+          <section class="p05-finding">
+            <p class="p05-category" data-edit="P05_CATEGORY_2">竞争表达</p>
+            <h2 data-edit="P05_FINDING_2">宽泛场景难以形成区别</h2>
+            <p class="p05-explanation" data-edit="P05_EXPLANATION_2">独饮、居家放松、中式佐餐、朋友小聚等场景，<br>已出现在现有语料与公开传播中。</p>
+            <p class="p05-evidence" data-edit="P05_EVIDENCE_2">依据：项目竞品与场景表达分析</p>
+          </section>
+
+          <section class="p05-finding">
+            <p class="p05-category" data-edit="P05_CATEGORY_3">梅见已有基础</p>
+            <h2 data-edit="P05_FINDING_3">已有承接基础，不等于独占</h2>
+            <p class="p05-explanation" data-edit="P05_EXPLANATION_3">青梅酒、中式佐餐与东方审美，<br>是进一步探索具体选饮帮助的基础。</p>
+            <p class="p05-evidence" data-edit="P05_EVIDENCE_3">依据：品牌与竞品公开事实库</p>
+          </section>
+        </div>
+
+        <div class="p05-relation" aria-label="从宽泛场景表达进入具体选择任务验证">
+          <div class="p05-relation-main">
+            <span data-edit="P05_RELATION_1">宽泛场景表达</span>
+            <span class="p05-relation-arrow" aria-hidden="true">→</span>
+            <span class="p05-relation-focus" data-edit="P05_RELATION_2">具体选择任务</span>
+            <span class="p05-relation-arrow" aria-hidden="true">→</span>
+            <span data-edit="P05_RELATION_3">进入系统验证</span>
+          </div>
+          <p class="p05-verify-list" data-edit="P05_VERIFY_LIST">待验证：选口味 · 配菜品 · 找饮法 · 定容量 · 饮用节奏</p>
+        </div>
+
+        <p class="p05-conclusion" data-edit="P05_CONCLUSION">机会不是再占一个宽泛场景，而是验证：<br>梅见能否把具体选择问题解决得更好。</p>
+        <p class="p05-footer" data-edit="P05_SOURCE">来源：方案第二章；229条Analysis Baseline与54条品牌／竞品公开证据。<br>采集数量表示证据覆盖，不代表市场需求占比。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>购买者体验分化、宽泛场景已被广泛表达，梅见已有青梅酒与中式佐餐承接基础，因此具体选择任务值得进入系统验证。<br>
+          <strong>讲述内容：</strong>先用三列快速说明需求、竞争和品牌基础，再用下方关系图把宽泛场景推进到具体选择任务。这里列出的五项任务仍待验证，不是最终品牌答案。<br>
+          <strong>证据边界：</strong>56条与44条表示体验证据覆盖，不代表100人或市场比例；229条Analysis Baseline与54条公开证据的采集数量也不代表市场需求占比。<br>
+          <strong>衔接：</strong>下一页说明已有工具能支持哪些工作，以及本项目连接的判断环节。
+        </aside>
+      </section>
+      <!-- ================= P05 梅见市场发现 END ================= -->
+
+      <!-- ================= P06 已有工具与判断过程 START ================= -->
+      <section class="slide slide-p06" id="p06" data-page="P06" data-title="已有工具帮助分析，我们把依据连到决策" data-time="20秒" style="--slide-bg: url('images/p05-tools-bridge-v01.png')" aria-labelledby="p06-title">
+        <header class="p06-header">
+          <h1 id="p06-title" aria-label="已有工具帮助分析，我们把依据连到决策">
+            <span class="p06-title-left" data-edit="P06_TITLE_LEFT">已有工具帮助分析，</span>
+            <span class="p06-title-right" data-edit="P06_TITLE_RIGHT">我们把依据连到决策</span>
+          </h1>
+        </header>
+
+        <div class="p06-layout">
+          <section class="p06-existing" aria-labelledby="p06-existing-title">
+            <p class="p06-section-label" id="p06-existing-title" data-edit="P06_LEFT_LABEL">已有工具能力</p>
+            <dl class="p06-tool-list">
+              <div class="p06-tool">
+                <dt data-edit="P06_TOOL_1_TITLE">调研与舆情分析</dt>
+                <dd data-edit="P06_TOOL_1_BODY">发现需求、趋势与消费者反馈</dd>
+              </div>
+              <div class="p06-tool">
+                <dt data-edit="P06_TOOL_2_TITLE">生成式AI</dt>
+                <dd data-edit="P06_TOOL_2_BODY">辅助分析、生成和修改候选</dd>
+              </div>
+              <div class="p06-tool">
+                <dt data-edit="P06_TOOL_3_TITLE">概念测试与投放分析</dt>
+                <dd data-edit="P06_TOOL_3_BODY">检验反馈，比较表达与行为效果</dd>
+              </div>
+            </dl>
+          </section>
+
+          <span class="p06-bridge" aria-hidden="true"></span>
+
+          <section class="p06-process" aria-labelledby="p06-process-title">
+            <p class="p06-section-label" id="p06-process-title" data-edit="P06_RIGHT_LABEL">本项目连接的判断过程</p>
+            <div class="p06-process-chain">
+              <article class="p06-process-node">
+                <h2 data-edit="P06_NODE_1_TITLE">候选有依据</h2>
+                <p data-edit="P06_NODE_1_BODY">支持证据、品牌事实</p>
+              </article>
+              <span class="p06-chain-arrow" aria-hidden="true">→</span>
+              <article class="p06-process-node">
+                <h2 data-edit="P06_NODE_2_TITLE">反证能触发修改</h2>
+                <p data-edit="P06_NODE_2_BODY">反例、处理原因、候选版本</p>
+              </article>
+              <span class="p06-chain-arrow" aria-hidden="true">→</span>
+              <article class="p06-process-node">
+                <h2 data-edit="P06_NODE_3_TITLE">新反馈能重开判断</h2>
+                <p data-edit="P06_NODE_3_BODY">新证据、状态变化、人工决定</p>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <p class="p06-conclusion" data-edit="P06_CONCLUSION">交付的不只是一份建议，<br>还有它为何成立、何时需要修改的依据。</p>
+        <p class="p06-footer" data-edit="P06_FOOTNOTE">展示本项目的集成重点，不代表其他工具不具备相关能力。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>已有工具可以完成调研、生成、测试和投放分析，本项目把这些材料连接成可以持续审查和修改的判断过程。<br>
+          <strong>讲述内容：</strong>左侧快速说明已有能力，右侧只讲三个连续环节：候选关联依据、反证触发修改、新反馈重开判断。这里表达接入与整合，不是替代或淘汰已有工具。<br>
+          <strong>表达边界：</strong>不声称其他工具无法判断，不展开四Agent分工，不加入未经验证的效率、准确率或成本数字。<br>
+          <strong>衔接：</strong>下一页具体说明企业交给系统什么，以及系统交付什么。
+        </aside>
+      </section>
+      <!-- ================= P06 已有工具与判断过程 END ================= -->
+
+      <!-- ================= P07 输入输出与人工确认 START ================= -->
+      <section class="slide slide-p07" id="p07" data-page="P07" data-title="输入市场证据，输出有依据的优先候选" data-time="15秒" style="--slide-bg: url('images/p06-input-output-channel-v01.png')" aria-labelledby="p07-title">
+        <header class="p07-header">
+          <h1 id="p07-title" data-edit="P07_TITLE">输入市场证据，输出有依据的优先候选</h1>
+        </header>
+
+        <div class="p07-flow" aria-label="输入材料、系统处理、输出结果与人工确认">
+          <section class="p07-input" aria-labelledby="p07-input-title">
+            <h2 class="p07-section-title" id="p07-input-title" data-edit="P07_INPUT_TITLE">输入材料</h2>
+            <ul class="p07-list">
+              <li data-edit="P07_INPUT_1">消费者反馈及来源</li>
+              <li data-edit="P07_INPUT_2">品牌与竞品事实</li>
+              <li data-edit="P07_INPUT_3">人工标准与业务约束</li>
+            </ul>
+          </section>
+
+          <span class="p07-arrow p07-arrow-one" aria-hidden="true"></span>
+
+          <section class="p07-process" aria-labelledby="p07-process-title">
+            <h2 class="p07-section-title" id="p07-process-title" data-edit="P07_PROCESS_TITLE">系统处理</h2>
+            <p class="p07-process-words" data-edit="P07_PROCESS_WORDS">生成 · 审查 · 重评</p>
+          </section>
+
+          <span class="p07-arrow p07-arrow-two" aria-hidden="true"></span>
+
+          <section class="p07-output" aria-labelledby="p07-output-title">
+            <h2 class="p07-section-title" id="p07-output-title" data-edit="P07_OUTPUT_TITLE">输出结果</h2>
+            <ul class="p07-list">
+              <li data-edit="P07_OUTPUT_1">候选优先级与选择依据</li>
+              <li data-edit="P07_OUTPUT_2">支持证据与关键反证</li>
+              <li data-edit="P07_OUTPUT_3">通过／修订／补证／淘汰建议</li>
+            </ul>
+          </section>
+
+          <section class="p07-human" aria-labelledby="p07-human-title">
+            <h2 id="p07-human-title" data-edit="P07_HUMAN_TITLE">人工确认</h2>
+            <p data-edit="P07_HUMAN_BODY">品牌方向与验证计划</p>
+          </section>
+        </div>
+
+        <p class="p07-conclusion" data-edit="P07_CONCLUSION">不只回答选什么，还说明为什么选、哪里仍需验证。</p>
+        <p class="p07-footer" data-edit="P07_SOURCE">本次初始分析：229条Baseline；54条品牌／竞品公开证据。<br>两类资料分别使用，不合计为消费者样本。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>系统接收消费者反馈及来源、品牌与竞品事实，以及人工标准与业务约束；经过生成、审查和重评，输出带依据的候选与处理建议，最终由人工确认品牌方向和验证计划。<br>
+          <strong>数据口径：</strong>229条是本次初始分析Baseline，不是全部数据集；54条是品牌与竞品公开事实证据，不是54名消费者。两类资料分别使用，不合计为消费者样本。购买者反馈也不能外推为所有潜在消费者。<br>
+          <strong>状态边界：</strong>通过、修订、补证、淘汰对应PASS、REVISE、DEFER、REJECT；本页不与后续市场实验的四种决定混用。系统输出候选和建议，人工确认最终方向。<br>
+          <strong>衔接：</strong>下一页再展开四Agent与编排器如何完成这些工作。
+        </aside>
+      </section>
+      <!-- ================= P07 输入输出与人工确认 END ================= -->
+
+      <!-- ================= P08 四Agent、编排器与人工治理 START ================= -->
+      <section class="slide slide-p08" id="p08" data-page="P08" data-title="四个Agent分工，编排器推进，人工决策" data-time="25秒" style="--slide-bg: url('images/p07-agent-architecture-v01.png')" aria-labelledby="p08-title">
+        <header class="p08-header">
+          <p class="p08-kicker" data-edit="P08_KICKER">职责与信息流示意</p>
+          <h1 id="p08-title" data-edit="P08_TITLE">四个Agent分工，编排器推进，人工决策</h1>
+        </header>
+
+        <div class="p08-architecture" aria-label="确定性编排器统一调度四个Agent，并由人工贯穿治理">
+          <section class="p08-orchestrator" aria-labelledby="p08-orchestrator-title">
+            <h2 id="p08-orchestrator-title" data-edit="P08_ORCHESTRATOR_TITLE">确定性编排器</h2>
+            <p data-edit="P08_ORCHESTRATOR_BODY">按既定规则调度 · 检查状态 · 记录运行</p>
+          </section>
+
+          <p class="p08-control-label" data-edit="P08_CONTROL_LABEL">统一调度</p>
+
+          <svg class="p08-lines" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 575" aria-hidden="true">
+            <defs>
+              <marker id="p08-arrow-gray" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#aeb7c0"></path>
+              </marker>
+              <marker id="p08-arrow-blue" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#a9c8f1"></path>
+              </marker>
+            </defs>
+
+            <!-- 编排器统一调度：虚线。 -->
+            <path d="M700 91 V126 M150 126 H1248 M150 126 V170 M516 126 V170 M882 126 V170 M1248 126 V170"
+              fill="none" stroke="rgba(207,210,214,0.48)" stroke-width="1.5" stroke-dasharray="6 7"></path>
+
+            <!-- 四个Agent的主信息流：实线。 -->
+            <path d="M300 288 H360 M666 288 H726 M1032 288 H1092"
+              fill="none" stroke="#aeb7c0" stroke-width="1.8" marker-end="url(#p08-arrow-gray)"></path>
+
+            <!-- 审查反馈先进入编排器，再按规则返回主决策。 -->
+            <path d="M1248 170 V112 H1012 V58 H996"
+              fill="none" stroke="#a9c8f1" stroke-width="1.9" marker-end="url(#p08-arrow-blue)"></path>
+            <path d="M804 91 V112 H882 V170"
+              fill="none" stroke="#a9c8f1" stroke-width="1.9" marker-end="url(#p08-arrow-blue)"></path>
+          </svg>
+
+          <p class="p08-loop-label" data-edit="P08_LOOP_LABEL">经编排器处理，必要时返回重构</p>
+
+          <div class="p08-agents" aria-label="四个Agent职责与主信息流">
+            <section class="p08-agent" aria-labelledby="p08-agent-1-title">
+              <p class="p08-agent-index">01</p>
+              <h3 id="p08-agent-1-title" data-edit="P08_AGENT_1_TITLE">数据筛选</h3>
+              <p data-edit="P08_AGENT_1_LINE_1">检查语料质量与纳入条件</p>
+              <p data-edit="P08_AGENT_1_LINE_2">记录排除／待复核原因</p>
+            </section>
+
+            <section class="p08-agent" aria-labelledby="p08-agent-2-title">
+              <p class="p08-agent-index">02</p>
+              <h3 id="p08-agent-2-title" data-edit="P08_AGENT_2_TITLE">证据Routing</h3>
+              <p data-edit="P08_AGENT_2_LINE_1">将合格语料归入问题类别</p>
+              <p data-edit="P08_AGENT_2_LINE_2">保留证据与来源</p>
+            </section>
+
+            <section class="p08-agent" aria-labelledby="p08-agent-3-title">
+              <p class="p08-agent-index">03</p>
+              <h3 id="p08-agent-3-title" data-edit="P08_AGENT_3_TITLE">主决策</h3>
+              <p data-edit="P08_AGENT_3_LINE_1">聚合洞察、生成候选</p>
+              <p data-edit="P08_AGENT_3_LINE_2">根据审查反馈重构</p>
+            </section>
+
+            <section class="p08-agent" aria-labelledby="p08-agent-4-title">
+              <p class="p08-agent-index">04</p>
+              <h3 id="p08-agent-4-title" data-edit="P08_AGENT_4_TITLE">品牌专属度审查</h3>
+              <p data-edit="P08_AGENT_4_LINE_1">提出反例、检查竞品替换</p>
+              <p data-edit="P08_AGENT_4_LINE_2">核验品牌资产与场景兑现依据</p>
+            </section>
+          </div>
+
+          <section class="p08-governance" aria-labelledby="p08-governance-title">
+            <span class="p08-governance-label" id="p08-governance-title" data-edit="P08_GOVERNANCE_TITLE">人工治理</span>
+            <span class="p08-governance-text" data-edit="P08_GOVERNANCE_BODY">制定标准 · 复核争议与重大变化 · 确认最终方向</span>
+          </section>
+        </div>
+
+        <p class="p08-conclusion" data-edit="P08_CONCLUSION">生成与审查分开，流程有规则，关键决定由人工确认。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页定位：</strong>职责与信息流示意，不是完整代码调用图。<br>
+          <strong>讲述内容：</strong>确定性编排器按规则调度、检查状态并记录运行。四个Agent依次负责数据筛选、证据Routing、主决策和品牌专属度审查。审查反馈先交给编排器，只有必要时才返回主决策重构。<br>
+          <strong>人工治理：</strong>人工贯穿标准制定、争议与重大变化复核、最终方向确认；不是每一步都手工审批，也不是最后才点击确认。<br>
+          <strong>实现边界：</strong>编排器是控制层，不是第五个Agent；角色隔离不等于多模型对抗；图示不表示系统自动批准市场投入，也不表示所有候选都会重构。<br>
+          <strong>核对状态：</strong>当前工作区未发现可核对的系统源代码或技术文档，因此本页保留为职责与信息流示意，不扩张为代码级调用关系。
+        </aside>
+      </section>
+      <!-- ================= P08 四Agent、编排器与人工治理 END ================= -->
+
+      <!-- P09-P18：背景保留，演讲备注先锁定每页论证任务。 -->
+      <!-- ================= P09 审查、状态处理与留痕 START ================= -->
+      <section class="slide slide-p09" id="p09" data-page="P09" data-title="审查不止提出问题，还推动候选修正" data-time="25秒" style="--slide-bg: url('images/p08-counterevidence-rebuild-v01.png')" aria-labelledby="p09-title">
+        <header class="p09-header">
+          <h1 id="p09-title" data-edit="P09_TITLE">审查不止提出问题，还推动候选修正</h1>
+          <p class="p09-subtitle" data-edit="P09_SUBTITLE">对抗式评审 × 状态驱动编排</p>
+        </header>
+
+        <div class="p09-body" aria-label="审查意见经编排器和人工确认后进入四种候选状态，并留下证据、原因和版本记录">
+          <section class="p09-review-flow" aria-label="审查到状态处理的流程">
+            <span class="p09-flow-line" aria-hidden="true"></span>
+
+            <div class="p09-flow-stage">
+              <span class="p09-flow-title" data-edit="P09_FLOW_1_TITLE">代表性审查</span>
+              <span class="p09-flow-detail" data-edit="P09_FLOW_1_DETAIL">竞品替换／品牌依据／场景兑现</span>
+            </div>
+
+            <div class="p09-flow-stage">
+              <span class="p09-flow-title" data-edit="P09_FLOW_2_TITLE">审查意见与状态建议</span>
+              <span class="p09-flow-detail" data-edit="P09_FLOW_2_DETAIL">审查Agent提出意见，不自行决定市场投入</span>
+            </div>
+
+            <div class="p09-flow-stage">
+              <span class="p09-flow-title" data-edit="P09_FLOW_3_TITLE">编排器按规则组织后续处理</span>
+              <span class="p09-flow-detail" data-edit="P09_FLOW_3_DETAIL">连接候选状态与后续路径<strong>重大状态变化由人工确认</strong></span>
+            </div>
+          </section>
+
+          <section class="p09-status-section" aria-labelledby="p09-status-title">
+            <h2 class="p09-status-heading" id="p09-status-title" data-edit="P09_STATUS_TITLE">四种候选状态及后续路径</h2>
+            <ol class="p09-status-list">
+              <li class="p09-status-row">
+                <span class="p09-status-code" data-edit="P09_PASS_CODE">PASS</span>
+                <span class="p09-status-name" data-edit="P09_PASS_NAME">通过</span>
+                <span class="p09-status-description" data-edit="P09_PASS_BODY">当前审查通过，进入后续验证或人工决策</span>
+              </li>
+              <li class="p09-status-row">
+                <span class="p09-status-code" data-edit="P09_REVISE_CODE">REVISE</span>
+                <span class="p09-status-name" data-edit="P09_REVISE_NAME">修订</span>
+                <span class="p09-status-description" data-edit="P09_REVISE_BODY">存在可修正问题，返回主决策重构</span>
+              </li>
+              <li class="p09-status-row">
+                <span class="p09-status-code" data-edit="P09_DEFER_CODE">DEFER</span>
+                <span class="p09-status-name" data-edit="P09_DEFER_NAME">暂缓</span>
+                <span class="p09-status-description" data-edit="P09_DEFER_BODY">证据不足，提出补证需求</span>
+              </li>
+              <li class="p09-status-row">
+                <span class="p09-status-code" data-edit="P09_REJECT_CODE">REJECT</span>
+                <span class="p09-status-name" data-edit="P09_REJECT_NAME">淘汰</span>
+                <span class="p09-status-description" data-edit="P09_REJECT_BODY">当前候选不继续，保留证据与原因</span>
+              </li>
+            </ol>
+            <p class="p09-audit" data-edit="P09_AUDIT">关联证据 · 处理原因 · 候选版本</p>
+          </section>
+        </div>
+
+        <p class="p09-conclusion" data-edit="P09_CONCLUSION">反证是否改变了判断，必须能从记录中核验。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页定位：</strong>说明反方审查如何连接候选后续处理，不重复四Agent架构，不展示虚构运行结果。<br>
+          <strong>讲述内容：</strong>品牌专属度审查先提出代表性问题和状态建议，编排器再按规则组织后续处理。重大状态变化由人工确认。PASS进入后续验证或人工决策，REVISE返回主决策重构，DEFER提出补证需求，REJECT停止当前候选并保留证据和原因。<br>
+          <strong>口径边界：</strong>三项审查不是完整检查清单；具体问题不机械对应某种状态；PASS不代表自动投放或市场成功；四种状态只用于候选管理，不与后续市场实验决定混用；状态名称不作为原创创新表述。<br>
+          <strong>视觉边界：</strong>背景人物为视觉素材，不是真实受访者。<br>
+          <strong>实现核对：</strong>既有已核实口径中，REVISE返回重构、DEFER进入补证、REJECT退出并留痕、PASS进入完成性检查，未发现与本页路径冲突。当前工作区未发现可供再次核验的系统源代码或技术文档，本页不扩张为完整代码调用图。
+        </aside>
+      </section>
+      <!-- ================= P09 审查、状态处理与留痕 END ================= -->
+      <!-- ================= P10 Demo视频外围文案 START ================= -->
+      <section class="slide slide-p10" id="p10" data-page="P10" data-title="一次候选修改，如何留下完整依据？" data-time="40秒" style="--slide-bg: url('images/p09-demo-stage-v01.png')" aria-labelledby="p10-title">
+        <header class="p10-header">
+          <h1 id="p10-title" data-edit="P10_TITLE">一次候选修改，如何留下完整依据？</h1>
+        </header>
+
+        <div class="p10-body">
+          <section class="p10-video-slot" aria-label="真实Demo录屏预留区域">
+            <p class="p10-video-placeholder" data-edit="P10_VIDEO_PLACEHOLDER">真实Demo录屏待接入</p>
+          </section>
+
+          <aside class="p10-guide" aria-labelledby="p10-guide-title">
+            <h2 class="p10-guide-title" id="p10-guide-title" data-edit="P10_GUIDE_TITLE">这段演示看三件事</h2>
+            <ol class="p10-guide-list">
+              <li class="p10-guide-item">
+                <span class="p10-guide-index">01</span>
+                <div class="p10-guide-copy">
+                  <h2 data-edit="P10_GUIDE_1_TITLE">原来怎么判断</h2>
+                  <p data-edit="P10_GUIDE_1_BODY">候选主张是什么？<br>依据来自哪里？</p>
+                </div>
+              </li>
+              <li class="p10-guide-item">
+                <span class="p10-guide-index">02</span>
+                <div class="p10-guide-copy">
+                  <h2 data-edit="P10_GUIDE_2_TITLE">为什么需要改</h2>
+                  <p data-edit="P10_GUIDE_2_BODY">审查发现了什么反证？<br>挑战了哪项原判断？</p>
+                </div>
+              </li>
+              <li class="p10-guide-item">
+                <span class="p10-guide-index">03</span>
+                <div class="p10-guide-copy">
+                  <h2 data-edit="P10_GUIDE_3_TITLE">最后怎样处理</h2>
+                  <p data-edit="P10_GUIDE_3_BODY">修订、补证，还是不再继续？<br>处理原因与版本如何记录？</p>
+                </div>
+              </li>
+            </ol>
+          </aside>
+        </div>
+
+        <p class="p10-conclusion" data-edit="P10_CONCLUSION">不只展示修改结果，也展示改变判断的依据。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>当前状态：</strong>本页只完成视频外围文案与布局，真实Demo录屏尚未接入。右侧内容是观看提示，不是已经核实的案例结果。<br>
+          <strong>素材边界：</strong>暂不填写具体候选名称、证据编号、状态变化、版本文案或人工确认记录；不写实时生成，也不宣称系统已经证明有效。<br>
+          <strong>后续处理：</strong>根据真实素材确认视频接入方式；若使用冻结结果回放，必须在接入时明确标识。视频区域未设置固定宽高比，便于按最终素材调整。<br>
+          <strong>40秒结构：</strong>8秒原候选及依据；12秒最关键反证；12秒触发处理与重构结果；8秒人工确认和版本记录。
+        </aside>
+      </section>
+      <!-- ================= P10 Demo视频外围文案 END ================= -->
+      <!-- ================= P11 增量证据重评与Checkpoint START ================= -->
+      <section class="slide slide-p11" id="p11" data-page="P11" data-title="新证据来了，旧判断还能成立吗？" data-time="20秒" style="--slide-bg: url('images/p10-evidence-iteration-v01.png')" aria-labelledby="p11-title">
+        <header class="p11-header">
+          <p class="p11-kicker" data-edit="P11_KICKER">持续重评机制示意</p>
+          <h1 id="p11-title" data-edit="P11_TITLE">新证据来了，旧判断还能成立吗？</h1>
+        </header>
+
+        <div class="p11-flow" aria-label="原判断通过新证据关联进入重新评估，重大变化由人工确认并保存Checkpoint版本快照">
+          <div class="p11-node-row">
+            <section class="p11-node" aria-labelledby="p11-node-1-title">
+              <h2 id="p11-node-1-title" data-edit="P11_NODE_1_TITLE">原判断</h2>
+              <p data-edit="P11_NODE_1_BODY">候选主张、已有依据<br>与当前状态</p>
+            </section>
+
+            <section class="p11-node" aria-labelledby="p11-node-2-title">
+              <h2 id="p11-node-2-title" data-edit="P11_NODE_2_TITLE">新证据</h2>
+              <p data-edit="P11_NODE_2_BODY">关联受影响的候选与依据<br>识别支持、补充或挑战</p>
+            </section>
+
+            <section class="p11-node" aria-labelledby="p11-node-3-title">
+              <h2 id="p11-node-3-title" data-edit="P11_NODE_3_TITLE">重新评估</h2>
+              <p data-edit="P11_NODE_3_BODY">维持原判断，或提出<br>修订、暂缓补证、淘汰建议</p>
+            </section>
+          </div>
+
+          <span class="p11-arrow p11-arrow-one" aria-hidden="true"></span>
+          <span class="p11-arrow p11-arrow-two" aria-hidden="true"></span>
+
+          <section class="p11-human" aria-labelledby="p11-human-title">
+            <h2 id="p11-human-title" data-edit="P11_HUMAN">重大状态变化由人工确认</h2>
+          </section>
+
+          <section class="p11-checkpoint" aria-labelledby="p11-checkpoint-title">
+            <h2 id="p11-checkpoint-title" data-edit="P11_CHECKPOINT_TITLE">Checkpoint 版本快照</h2>
+            <p data-edit="P11_CHECKPOINT_BODY">保存本批次候选状态与关联依据，供前后对照</p>
+          </section>
+        </div>
+
+        <p class="p11-boundary" data-edit="P11_BOUNDARY"><strong>当前：</strong>Delta 20用于增量变化演示。<br><strong>后续：</strong>真实市场反馈下的持续运行效果，仍需企业试点验证。</p>
+        <p class="p11-conclusion" data-edit="P11_CONCLUSION">不仅记录“改了什么”，还说明“为什么改或不改”。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页定位：</strong>持续重评机制示意。第10页展示一次候选修改，本页说明不同批次的新证据怎样关联旧判断。<br>
+          <strong>讲述内容：</strong>系统保留候选主张、已有依据和当前状态。新证据进入后先关联受影响的候选，再识别它是支持、补充还是挑战，并提出维持、修订、暂缓补证或淘汰建议。新数据不必然改变结论，重大状态变化由人工确认。Checkpoint只保存本批次状态与依据，便于前后对照。<br>
+          <strong>证据边界：</strong>当前Delta 20用于增量变化演示；真实市场反馈下的持续运行效果仍需企业试点验证。当前不声称已自动接入全部投放、销售或复购数据。<br>
+          <strong>实现边界：</strong>Checkpoint是记录机制，不是自动推理引擎；增量重评不是模型自我训练或模型权重更新。此前已核实记录支持快照、哈希、Checkpoint及Delta隔离，但当前工作区未发现可供本轮重新核验的系统源代码或技术文档。
+        </aside>
+      </section>
+      <!-- ================= P11 增量证据重评与Checkpoint END ================= -->
+      <!-- ================= P12 五个候选收敛为三项机制 START ================= -->
+      <section class="slide slide-p12" id="p12" data-page="P12" data-title="五个候选，收敛为三项优先机制" data-time="25秒" style="--slide-bg: url('images/p11-five-to-three-v01.png')" aria-labelledby="p12-title">
+        <header class="p12-header">
+          <h1 id="p12-title" data-edit="P12_TITLE">五个候选，收敛为三项优先机制</h1>
+        </header>
+
+        <div class="p12-main" aria-label="五个候选机会经过系统审查与重构，并结合真人反馈和人工判断，收敛为三项优先机制">
+          <section class="p12-candidates" aria-labelledby="p12-candidates-title">
+            <p class="p12-candidate-number" aria-hidden="true">5</p>
+            <h2 id="p12-candidates-title" data-edit="P12_CANDIDATES_TITLE">5个候选机会</h2>
+            <p data-edit="P12_CANDIDATES_NOTE">来自市场证据的<br>不同机会假设</p>
+          </section>
+
+          <span class="p12-arrow p12-arrow-one" aria-hidden="true"></span>
+
+          <section class="p12-convergence" aria-labelledby="p12-convergence-title">
+            <h2 id="p12-convergence-title" data-edit="P12_CONVERGENCE_TITLE">系统审查与重构</h2>
+            <p data-edit="P12_CONVERGENCE_BODY">结合真人反馈<br>和人工判断</p>
+          </section>
+
+          <span class="p12-arrow p12-arrow-two" aria-hidden="true"></span>
+
+          <section class="p12-mechanisms" aria-label="三项优先机制">
+            <article class="p12-mechanism">
+              <h2 data-edit="P12_MECHANISM_1_TITLE">梅见溯源</h2>
+              <p data-edit="P12_MECHANISM_1_BODY">为什么值得相信？</p>
+            </article>
+            <article class="p12-mechanism">
+              <h2 data-edit="P12_MECHANISM_2_TITLE">口味图鉴</h2>
+              <p data-edit="P12_MECHANISM_2_BODY">这顿饭选哪款？</p>
+            </article>
+            <article class="p12-mechanism">
+              <h2 data-edit="P12_MECHANISM_3_TITLE">容量适配</h2>
+              <p data-edit="P12_MECHANISM_3_BODY">这顿饭买多少？</p>
+            </article>
+          </section>
+        </div>
+
+        <section class="p12-adjustment" aria-labelledby="p12-adjustment-title">
+          <h2 id="p12-adjustment-title" data-edit="P12_ADJUSTMENT_TITLE">层级调整</h2>
+          <div class="p12-adjustment-row">
+            <span class="p12-adjustment-name" data-edit="P12_ADJUSTMENT_1_NAME">饮法建议</span>
+            <span class="p12-adjustment-arrow" aria-hidden="true">→</span>
+            <span data-edit="P12_ADJUSTMENT_1_BODY">纳入口味图鉴，经产品验证后使用</span>
+          </div>
+          <div class="p12-adjustment-row">
+            <span class="p12-adjustment-name" data-edit="P12_ADJUSTMENT_2_NAME">自主节奏</span>
+            <span class="p12-adjustment-arrow" aria-hidden="true">→</span>
+            <span data-edit="P12_ADJUSTMENT_2_BODY">作为体验结果，不承担独立品牌定位</span>
+          </div>
+        </section>
+
+        <p class="p12-conclusion" data-edit="P12_CONCLUSION">不是三个新故事，而是共同解决一次选饮任务。</p>
+        <p class="p12-source" data-edit="P12_SOURCE">来源：方案第六章候选收敛与真人验证、第七章品牌建设机制。<br>图示为结果层级，不代表五个候选的逐条状态记录。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>五个市场机会假设经过系统审查与重构，并结合真人反馈和人工判断，最终形成三项优先建设机制。系统没有独立完成最终品牌战略。<br>
+          <strong>层级变化：</strong>梅见溯源、口味图鉴与容量适配共同解决一次选饮任务；饮法建议纳入口味图鉴，且需产品验证后使用；自主节奏作为体验结果，不承担独立品牌定位。两项调整不等于需求已被否定。<br>
+          <strong>记录边界：</strong>当前指令未提供五个候选的正式名称及对应运行记录，因此左侧仅展示候选集合，不编造名称、编号、评分、反证、状态或逐条淘汰路径。后续获得正式记录后再按原文补齐。<br>
+          <strong>表达边界：</strong>三项机制不是三个核心场景或三个最终品牌方向，也不表示企业已全部建成这些能力；本页不展示最终口号、场景扩张路径、真人比例或成本节省推算。
+        </aside>
+      </section>
+      <!-- ================= P12 五个候选收敛为三项机制 END ================= -->
+      <!-- ================= P13 真人反馈与场景优先级 START ================= -->
+      <section class="slide slide-p13" id="p13" data-page="P13" data-title="真人反馈：先从两人便饭开始，专属性仍待建设" data-time="25秒" style="--slide-bg: url('images/p12-human-correction-v01.png')" aria-labelledby="p13-title">
+        <header class="p13-header">
+          <h1 id="p13-title" data-edit="P13_TITLE">真人反馈：先从两人便饭开始，专属性仍待建设</h1>
+        </header>
+
+        <section class="p13-results" aria-label="真人验证的两项关键结果">
+          <article class="p13-metric">
+            <p class="p13-metric-value" data-edit="P13_METRIC_1_VALUE">67.86%</p>
+            <p class="p13-metric-question" data-edit="P13_METRIC_1_QUESTION">方向描述下，无品牌提示联想到梅见</p>
+            <p class="p13-metric-reading" data-edit="P13_METRIC_1_READING">初步支持品牌匹配</p>
+          </article>
+
+          <article class="p13-metric p13-metric-risk">
+            <p class="p13-metric-value" data-edit="P13_METRIC_2_VALUE">78.43%</p>
+            <p class="p13-metric-question" data-edit="P13_METRIC_2_QUESTION">认为竞品可完全或部分替代</p>
+            <p class="p13-metric-reading" data-edit="P13_METRIC_2_READING">尚未形成难以替代的认知</p>
+          </article>
+        </section>
+
+        <section class="p13-scenarios" aria-labelledby="p13-scenarios-title">
+          <h2 id="p13-scenarios-title" data-edit="P13_SCENARIOS_TITLE">基于真人反馈的项目场景安排</h2>
+          <div class="p13-scenario-row">
+            <article class="p13-scenario">
+              <p class="p13-scenario-label" data-edit="P13_SCENARIO_1_LABEL">优先验证</p>
+              <p class="p13-scenario-name" data-edit="P13_SCENARIO_1_NAME">两个人日常便饭</p>
+            </article>
+            <article class="p13-scenario">
+              <p class="p13-scenario-label" data-edit="P13_SCENARIO_2_LABEL">后续扩张</p>
+              <p class="p13-scenario-name" data-edit="P13_SCENARIO_2_NAME">三五人重口味小聚</p>
+            </article>
+            <article class="p13-scenario">
+              <p class="p13-scenario-label" data-edit="P13_SCENARIO_3_LABEL">补充观察</p>
+              <p class="p13-scenario-name" data-edit="P13_SCENARIO_3_NAME">一个人吃中餐</p>
+            </article>
+          </div>
+        </section>
+
+        <p class="p13-conclusion" data-edit="P13_CONCLUSION">真人反馈初步支持优先承接，不等于已经独占。</p>
+        <p class="p13-source" data-edit="P13_SOURCE"><strong>同一批受访者参与两阶段验证：</strong>第一阶段56份有效问卷，第二阶段51人继续回答。<br>逐题计算口径见方案6.5；结果为小样本初步支持。逐题分母待核对。<br>背景为生成场景示意，非真实受访者。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>本页结论：</strong>真人反馈初步支持将“两个人日常便饭”作为优先验证场景，同时显示品牌可替代性仍然较高，专属性仍待建设。<br>
+          <strong>场景安排：</strong>优先验证“两个人日常便饭”，后续扩张“三五人重口味小聚”，补充观察“一个人吃中餐”。这是项目团队依据真人反馈作出的场景安排，不是AI自动结论，也不是已经实现的市场效果。<br>
+          <strong>样本口径：</strong>同一批受访者参与两阶段验证。第一阶段56份有效问卷，第二阶段51人继续回答，不能相加为107名独立受访者。当前未提供两项指标的逐题分母，不标注n=51，也不反推具体人数；逐题分母仍待核对。<br>
+          <strong>指标边界：</strong>67.86%不是购买率、品牌市场份额或全市场知名度，也不能直接解释为优于所有主要竞品。78.43%是受访者对可替代性的判断，不是实际流失率。结果只构成小样本初步支持，不证明消费者普遍认可、显著提升或销售增长。<br>
+          <strong>素材边界：</strong>背景为生成场景示意，非真实受访者；不为人物添加姓名、问卷气泡或虚构原话。后续若正式问卷计算表与数字或表述不同，先核对再修改。
+        </aside>
+      </section>
+      <!-- ================= P13 真人反馈与场景优先级 END ================= -->
+      <!-- ================= P14 最终品牌方向与建设路径 START ================= -->
+      <section class="slide slide-p14" id="p14" data-page="P14" data-title="让梅见成为中国饭的青梅酒选饮标准" data-time="25秒" style="--slide-bg: url('images/p13-brand-answer-three-paths-v04.png')" aria-labelledby="p14-title">
+        <header class="p14-header">
+          <p class="p14-kicker" data-edit="P14_KICKER">建议建设的长期认知</p>
+          <h1 id="p14-title" data-edit="P14_TITLE">让梅见成为中国饭的青梅酒选饮标准</h1>
+        </header>
+
+        <section class="p14-mother" aria-labelledby="p14-mother-label">
+          <p class="p14-section-label" id="p14-mother-label" data-edit="P14_MOTHER_LABEL">品牌母题</p>
+          <p class="p14-mother-copy" data-edit="P14_MOTHER_COPY">面对不同的中国饭，梅见帮助消费者选到更合适的青梅酒。</p>
+        </section>
+
+        <div class="p14-mechanisms" aria-label="品牌母题的三项建设机制">
+          <p class="p14-mechanism"><strong data-edit="P14_MECHANISM_1_NAME">溯源</strong><span data-edit="P14_MECHANISM_1_BODY">为什么相信</span></p>
+          <p class="p14-mechanism"><strong data-edit="P14_MECHANISM_2_NAME">口味</strong><span data-edit="P14_MECHANISM_2_BODY">这顿饭选哪款</span></p>
+          <p class="p14-mechanism"><strong data-edit="P14_MECHANISM_3_NAME">容量</strong><span data-edit="P14_MECHANISM_3_BODY">这顿饭买多少</span></p>
+        </div>
+
+        <section class="p14-path" aria-labelledby="p14-path-label">
+          <p class="p14-section-label" id="p14-path-label" data-edit="P14_PATH_LABEL">建设路径</p>
+          <div class="p14-path-grid">
+            <article class="p14-path-stage">
+              <p class="p14-stage-label" data-edit="P14_STAGE_1_LABEL">先做深</p>
+              <p class="p14-stage-name" data-edit="P14_STAGE_1_NAME">两个人日常便饭</p>
+            </article>
+            <div class="p14-path-connector" aria-label="验证后扩张">
+              <span class="p14-connector-label" data-edit="P14_CONNECTOR_1_LABEL">验证后扩张</span>
+            </div>
+            <article class="p14-path-stage">
+              <p class="p14-stage-label" data-edit="P14_STAGE_2_LABEL">扩张场景</p>
+              <p class="p14-stage-name" data-edit="P14_STAGE_2_NAME">三五人重口味小聚</p>
+            </article>
+            <div class="p14-path-connector" aria-hidden="true"></div>
+            <article class="p14-path-stage">
+              <p class="p14-stage-label" data-edit="P14_STAGE_3_LABEL">长期目标</p>
+              <p class="p14-stage-name" data-edit="P14_STAGE_3_NAME">更多中国饭中的<br>稳定选择联想</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="p14-expression" aria-labelledby="p14-expression-label">
+          <p class="p14-section-label" id="p14-expression-label" data-edit="P14_EXPRESSION_LABEL">传播表达</p>
+          <p class="p14-expression-copy" data-edit="P14_EXPRESSION_COPY">梅见，中国饭的刚好一杯。</p>
+        </section>
+
+        <p class="p14-source" data-edit="P14_SOURCE">基于系统证据、真人反馈与人工战略收敛形成。<br>专属性需通过产品、内容与渠道持续兑现，并接受市场验证。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>长期认知：</strong>建议让梅见成为“中国饭的青梅酒选饮标准”。这是建议建设的长期认知，不代表梅见已经获得该品牌地位，也不是经认证的行业标准。<br>
+          <strong>品牌母题：</strong>面对不同的中国饭，梅见帮助消费者选到更合适的青梅酒。溯源、口味与容量是支撑母题的建设机制，不表示这些产品能力已经全部落地，也不证明竞品无法复制。<br>
+          <strong>建设路径：</strong>先做深“两个人日常便饭”。通过产品、内容、渠道及市场验证后，再考虑扩张到“三五人重口味小聚”，长期目标是形成更多中国饭中的稳定选择联想。扩张不代表必然成功，也不会按时间自动发生；“一人中餐”仍作为补充观察，不进入本页主路径。<br>
+          <strong>传播表达：</strong>“梅见，中国饭的刚好一杯。”用于传播收束，不替代长期认知，也不表示人人都应饮用固定一杯。<br>
+          <strong>形成边界：</strong>本方案基于系统证据、真人反馈与人工战略收敛形成，不是AI自动生成的最终品牌战略；不重复真人验证比例，不新增情绪定位、子品牌或产品规格。
+        </aside>
+      </section>
+      <!-- ================= P14 最终品牌方向与建设路径 END ================= -->
+      <!-- ================= P15 决策变化与Business Case测算 START ================= -->
+      <section class="slide slide-p15" id="p15" data-page="P15" data-title="决策变化已有记录，经营价值仍需验证" data-time="20秒" style="--slide-bg: url('images/p15-quantified-value-v01.png')" aria-labelledby="p15-title">
+        <header class="p15-header">
+          <h1 id="p15-title" data-edit="P15_TITLE">决策变化已有记录，经营价值仍需验证</h1>
+        </header>
+
+        <div class="p15-columns" aria-label="实际决策变化、Business Case测算和企业试点待验证">
+          <section class="p15-column" aria-labelledby="p15-actual-label">
+            <p class="p15-label" id="p15-actual-label" data-edit="P15_ACTUAL_LABEL">实际决策变化</p>
+            <p class="p15-metric" data-edit="P15_ACTUAL_METRIC">5 → 3 → 1</p>
+            <p class="p15-copy" data-edit="P15_ACTUAL_COPY">5个候选收敛为3项优先机制，<br>再由人工形成1个品牌方向。</p>
+            <p class="p15-small" data-edit="P15_ACTUAL_BOUNDARY">这是决策收敛结果，<br>不等于节省40%的测试成本。</p>
+          </section>
+
+          <section class="p15-column" aria-labelledby="p15-case-label">
+            <p class="p15-label" id="p15-case-label" data-edit="P15_CASE_LABEL">Business Case测算</p>
+            <p class="p15-metric" data-edit="P15_CASE_METRIC">3,400元</p>
+            <p class="p15-metric-caption" data-edit="P15_CASE_CAPTION">单轮潜在净价值</p>
+            <p class="p15-formula" data-edit="P15_CASE_FORMULA">单方向测试：2 ×（1,200＋2,000）＝<strong>6,400元</strong><br>扣除系统分析与人工审核增量投入：<strong>3,000元</strong><br>潜在净价值：6,400－3,000＝<strong>3,400元</strong></p>
+            <p class="p15-assumption" data-edit="P15_CASE_ASSUMPTION">假设提前避免一个原本会测试的低潜方向，<br>且该方向6,400元测试投入可以完整避免。</p>
+          </section>
+
+          <section class="p15-column" aria-labelledby="p15-pilot-label">
+            <p class="p15-label" id="p15-pilot-label" data-edit="P15_PILOT_LABEL">企业试点待验证</p>
+            <ul class="p15-pilot-list">
+              <li><strong data-edit="P15_PILOT_1_NAME">时间</strong><span data-edit="P15_PILOT_1_BODY">同任务耗时与实际人时</span></li>
+              <li><strong data-edit="P15_PILOT_2_NAME">质量</strong><span data-edit="P15_PILOT_2_BODY">事实错误、遗漏与返工</span></li>
+              <li><strong data-edit="P15_PILOT_3_NAME">业务</strong><span data-edit="P15_PILOT_3_BODY">方向效果与实际测试支出</span></li>
+            </ul>
+            <p class="p15-small" data-edit="P15_PILOT_NOTE">比较原有流程与系统辅助流程，<br>记录成本、判断质量及后续验证结果。</p>
+          </section>
+        </div>
+
+        <p class="p15-conclusion" data-edit="P15_CONCLUSION">价值不只看少花多少钱，<br>还要看是否更快形成经得起验证的判断。</p>
+        <p class="p15-source" data-edit="P15_SOURCE">以上为Business Case情境测算，非已实现收益。<br>制作、投放和系统投入均为假设参数，需用企业真实数据替换。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>实际变化：</strong>5个候选收敛为3项优先机制，再由人工形成1个品牌方向。这是已有方案记录中的决策收敛，不表示淘汰的两个方向必然会被投放，也不能换算为已节省40%的测试成本。<br>
+          <strong>基础参数：</strong>单方向按2条素材测算，每条制作1,200元、测试投放2,000元，因此单方向测试投入为2 ×（1,200＋2,000）＝6,400元。系统分析与人工审核的单轮增量投入为3,000元。<br>
+          <strong>情境含义：</strong>3,400元仅对应“完整避免一次原本会发生的低潜方向测试”这一条件情境，不是已节省金额，也不是每轮都能获得的平均收益。假设每轮只有一个这样的低潜方向，预期净价值＝有效阻断概率×6,400－3,000。<br>
+          <strong>敏感性：</strong>有效阻断概率为40%时，单轮净值为－440元；60%时为840元；100%时为3,400元。理论盈亏平衡概率为3,000÷6,400＝46.875%，约46.88%。这些概率不是已测得的系统表现。<br>
+          <strong>未计风险：</strong>错误阻断好方向的机会损失尚未计入，因此该模型不是完整经营ROI，也不能将全部企业测试支出视为浪费。<br>
+          <strong>时间口径：</strong>工时减少不必然等于现金支出减少。后续统计时间价值时，需要避免与3,000元中的人工成本重复计算。当前不填写没有同任务实测依据的时间缩短比例。<br>
+          <strong>验证边界：</strong>品牌表达A/B测试不能单独证明系统比人工更有效；系统效率与质量需要同任务对照。敏感性数据仅用于备注或备用材料，本页不扩展到三方向、年度或多品牌收益。
+        </aside>
+      </section>
+      <!-- ================= P15 决策变化与Business Case测算 END ================= -->
+      <!-- ================= P16 企业试点 START ================= -->
+      <section class="slide slide-p16" id="p16" data-page="P16" data-title="先小范围验证，再决定是否放大" data-time="20秒" style="--slide-bg: url('images/p16-pilot-testing-v01.png')" aria-labelledby="p16-title">
+        <header class="p16-header">
+          <p class="p16-eyebrow" data-edit="P16_EYEBROW">企业试点计划｜尚未实施结果</p>
+          <h1 id="p16-title" data-edit="P16_TITLE">先小范围验证，再决定是否放大</h1>
+        </header>
+
+        <p class="p16-lede" data-edit="P16_LEDE">先在有限范围试点，分别验证品牌方向效果与系统辅助价值，<br>再决定是否扩大投入。</p>
+
+        <div class="p16-paths" aria-label="两条相互独立的验证路径">
+          <section class="p16-path p16-path--brand" aria-labelledby="p16-brand-title">
+            <p class="p16-path-label">路径一</p>
+            <h2 id="p16-brand-title">验证品牌方向</h2>
+            <p class="p16-context"><strong>固定场景</strong>两个人日常便饭</p>
+            <div class="p16-options">
+              <div class="p16-option">
+                <strong>A 现有表达</strong>
+                <span>现有中式佐餐或泛化品牌表达</span>
+              </div>
+              <div class="p16-option p16-option--accent">
+                <strong>B 新选饮方案</strong>
+                <span>加入溯源、口味与容量选择依据</span>
+              </div>
+            </div>
+            <p class="p16-observe"><strong>观察</strong>品牌理解 · 选择行为 · 转化成本</p>
+          </section>
+
+          <section class="p16-path" aria-labelledby="p16-system-title">
+            <p class="p16-path-label">路径二</p>
+            <h2 id="p16-system-title">验证系统价值</h2>
+            <p class="p16-context"><strong>比较方式</strong>同任务对照</p>
+            <div class="p16-options">
+              <div class="p16-option">
+                <strong>原有工作流程</strong>
+                <span>同一任务范围与交付要求</span>
+              </div>
+              <div class="p16-option p16-option--accent">
+                <strong>系统辅助流程</strong>
+                <span>对比实际投入与判断表现</span>
+              </div>
+            </div>
+            <p class="p16-observe"><strong>记录</strong>实际人时 · 工作费用 · 判断质量</p>
+          </section>
+        </div>
+
+        <section class="p16-decisions" aria-labelledby="p16-decisions-title">
+          <p class="p16-decisions-title" id="p16-decisions-title">市场实验后的决定</p>
+          <div class="p16-decision-grid">
+            <p class="p16-decision"><strong>继续</strong><span>达到预设门槛，再逐步放大</span></p>
+            <p class="p16-decision"><strong>修正</strong><span>方向有支持，表达或承接需调整</span></p>
+            <p class="p16-decision"><strong>停止</strong><span>充分测试后仍未达门槛，暂停投入</span></p>
+            <p class="p16-decision p16-decision--attack"><strong>重新攻击</strong><span>出现关键反证，返回系统重评</span></p>
+          </div>
+          <p class="p16-decision-note">不对应 PASS／REVISE／DEFER／REJECT 候选状态。</p>
+        </section>
+
+        <p class="p16-conclusion" data-edit="P16_CONCLUSION">验证方向是否有效，也验证系统是否值得使用。</p>
+        <p class="p16-source" data-edit="P16_SOURCE">实验门槛、样本量与观察周期在试点前确定；以上为验证计划，不是已实现效果。</p>
+
+        <aside class="notes-source" hidden>
+          <strong>20秒说明：</strong>先在有限范围试点，分别验证品牌方向效果与系统辅助价值，再决定是否扩大投入。两条路径是相互独立的验证，不画成一个实验。<br><br>
+          <strong>品牌实验：</strong><br>
+          · 不重新把五个候选或多个场景平均投流赛马。<br>
+          · 在已选定的“两人日常便饭”内比较表达方案。<br>
+          · 尽量统一产品、价格、优惠、内容形式、渠道与投放周期。<br>
+          · 在条件允许时随机分配受众，避免把受众差异误判为方案差异。<br>
+          · 本轮检验的是“新表达＋选饮信息”的整体效果，不能单独归因于一句口号或某一项机制。<br>
+          · 品牌理解需有明确测量方法，不能用播放量代替。<br><br>
+          <strong>系统对照：</strong><br>
+          · 尽量统一任务范围、输入资料、交付要求和质量评价标准。<br>
+          · 防止先做一遍后熟悉任务造成的学习效应。<br>
+          · 记录实际人时，不仅记录日历天数。<br>
+          · 判断质量可检查事实错误、证据追溯、遗漏和返工；条件允许时采用独立盲评。<br>
+          · 品牌A/B结果不能单独证明AI优于人工。<br>
+          · 时间释放不自动等于现金节省，避免重复计算成本。<br><br>
+          <strong>决策：</strong><br>
+          · 不因一次小样本差异或单条素材表现就宣布胜出或失败。<br>
+          · 数据不足时不急于放大或下结论，先补足必要观察。<br>
+          · 关键决定由人工确认。
+        </aside>
+      </section>
+      <!-- ================= P16 企业试点 END ================= -->
+      <section class="slide" id="p17" data-page="P17" data-title="迁移：第二品牌及其他市场任务如何复用？" data-time="15秒" style="--slide-bg: url('images/p17-migration-v01.png')" aria-label="P17 迁移"><aside class="notes-source" hidden><strong>可复用：</strong>证据整理、候选生成、攻击性检查、状态变化和反馈记录。<br><strong>需新增：</strong>新品牌事实、品类知识、研发约束、人工标准及真人试用或试售。<br><strong>示例：</strong>可用茶饮新品机会筛选说明迁移方式，但不写成现有系统已经能够预测爆款。</aside></section>
+      <!-- ================= P18 双重交付收尾 START ================= -->
+      <section class="slide slide-p18" id="p18" data-page="P18" data-title="给梅见一个方向，给企业一套判断机制。" data-time="10秒" style="--slide-bg: url('images/p18-closing-blue-light-v01.png')" aria-labelledby="p18-title">
+        <header class="p18-header">
+          <h1 id="p18-title" data-edit="P18_TITLE">给梅见一个方向，<br>给企业一套判断机制。</h1>
+        </header>
+
+        <div class="p18-deliverables" aria-label="项目的两项明确交付">
+          <section class="p18-deliverable" aria-labelledby="p18-brand-label">
+            <p class="p18-deliverable-label" id="p18-brand-label" data-edit="P18_BRAND_LABEL">建议建设的品牌认知</p>
+            <p class="p18-deliverable-copy" data-edit="P18_BRAND_COPY">中国饭的青梅酒选饮标准</p>
+          </section>
+
+          <section class="p18-deliverable" aria-labelledby="p18-system-label">
+            <p class="p18-deliverable-label" id="p18-system-label" data-edit="P18_SYSTEM_LABEL">可进入企业试点的决策机制</p>
+            <p class="p18-deliverable-copy" data-edit="P18_SYSTEM_COPY">从市场证据出发，<br>提出方向、主动检验、持续修正。</p>
+          </section>
+        </div>
+
+        <p class="p18-closing" data-edit="P18_CLOSING">独特认知，不靠一句话宣布，靠持续兑现形成。</p>
+        <p class="p18-signature" data-edit="P18_SIGNATURE">知行合一队｜吴沛鸿 · 王腾昊</p>
+
+        <aside class="notes-source" hidden>
+          <strong>双重交付：</strong>给梅见的交付是建议建设“中国饭的青梅酒选饮标准”这一品牌认知；给企业的交付是一套可进入试点、能从市场证据出发持续提出、检验和修正方向的决策机制。<br>
+          <strong>品牌边界：</strong>“中国饭的青梅酒选饮标准”是建议建设方向，不是已经形成的市场地位，也不是获得认证的行业标准。<br>
+          <strong>系统边界：</strong>可进入企业试点不等于已经完成企业级部署。本项目不宣称已实现品牌独占、市场成功或跨品牌收益，也不把最终战略描述为AI自动决定。<br>
+          <strong>收束句：</strong>独特认知，不靠一句话宣布，靠持续兑现形成。
+        </aside>
+      </section>
+      <!-- ================= P18 双重交付收尾 END ================= -->
+    </main>
+  </div>
+
+  <nav class="controls" id="controls" aria-label="演示控制">
+    <button type="button" id="prevButton" aria-label="上一页">上一页</button>
+    <span class="page-status" id="pageStatus" aria-live="polite">01 / 18</span>
+    <button type="button" id="nextButton" aria-label="下一页">下一页</button>
+    <button type="button" id="overviewButton" aria-expanded="false">总览</button>
+    <button type="button" id="notesButton" aria-pressed="false">备注</button>
+    <button type="button" id="fullscreenButton">全屏</button>
+  </nav>
+
+  <div class="keyboard-help" id="keyboardHelp" aria-hidden="true">← → 翻页　G 总览　N 备注　F 全屏</div>
+
+  <section class="overview" id="overview" hidden aria-labelledby="overviewTitle">
+    <header class="overview-header">
+      <div>
+        <h2 id="overviewTitle">18页路演结构</h2>
+        <p>点击缩略图进入页面，按 N 查看每页讲述大纲。P01至P05已有正文，P06至P18等待正式内容与证据。</p>
+      </div>
+      <button class="overview-close" id="overviewClose" type="button">关闭</button>
+    </header>
+    <div class="overview-grid">
+      <button class="thumb" type="button" data-index="0"><img src="images/p01-opening-blue-light-v01.png" alt="P01背景"><span class="thumb-meta"><b>01</b><span>开场：广告火了，品牌就赢了吗？</span><small>15秒</small></span></button>
+      <button class="thumb" type="button" data-index="1"><img src="images/p14-realized-value-v01.png" alt="P02背景"><span class="thumb-meta"><b>02</b><span>新酒饮已经进入认知竞争阶段</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="2"><img src="images/p02-traditional-process-layers-v01.png" alt="P03背景"><span class="thumb-meta"><b>03</b><span>传统流程：企业怎样选择和放大内容？</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="3"><img src="images/p03-four-breaks-v01.png" alt="P04背景"><span class="thumb-meta"><b>04</b><span>四个断点：判断与成本在哪里失控？</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="4"><img src="images/p04-market-crosscheck-v01.png" alt="P05背景"><span class="thumb-meta"><b>05</b><span>从“适合什么场景”，走向“解决什么选择问题”</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="5"><img src="images/p05-tools-bridge-v01.png" alt="P06背景"><span class="thumb-meta"><b>06</b><span>已有工具帮助分析，我们把依据连到决策</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="6"><img src="images/p06-input-output-channel-v01.png" alt="P07背景"><span class="thumb-meta"><b>07</b><span>输入市场证据，输出有依据的优先候选</span><small>15秒</small></span></button>
+      <button class="thumb" type="button" data-index="7"><img src="images/p07-agent-architecture-v01.png" alt="P08背景"><span class="thumb-meta"><b>08</b><span>四个Agent分工，编排器推进，人工决策</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="8"><img src="images/p08-counterevidence-rebuild-v01.png" alt="P09背景"><span class="thumb-meta"><b>09</b><span>审查不止提出问题，还推动候选修正</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="9"><img src="images/p09-demo-stage-v01.png" alt="P10背景"><span class="thumb-meta"><b>10</b><span>一次候选修改，如何留下完整依据？</span><small>40秒</small></span></button>
+      <button class="thumb" type="button" data-index="10"><img src="images/p10-evidence-iteration-v01.png" alt="P11背景"><span class="thumb-meta"><b>11</b><span>新证据来了，旧判断还能成立吗？</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="11"><img src="images/p11-five-to-three-v01.png" alt="P12背景"><span class="thumb-meta"><b>12</b><span>五个候选，收敛为三项优先机制</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="12"><img src="images/p12-human-correction-v01.png" alt="P13背景"><span class="thumb-meta"><b>13</b><span>真人反馈：先从两人便饭开始，专属性仍待建设</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="13"><img src="images/p13-brand-answer-three-paths-v04.png" alt="P14背景"><span class="thumb-meta"><b>14</b><span>让梅见成为中国饭的青梅酒选饮标准</span><small>25秒</small></span></button>
+      <button class="thumb" type="button" data-index="14"><img src="images/p15-quantified-value-v01.png" alt="P15背景"><span class="thumb-meta"><b>15</b><span>决策变化已有记录，经营价值仍需验证</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="15"><img src="images/p16-pilot-testing-v01.png" alt="P16背景"><span class="thumb-meta"><b>16</b><span>企业试点：首场景A/B验证与继续／停止规则</span><small>20秒</small></span></button>
+      <button class="thumb" type="button" data-index="16"><img src="images/p17-migration-v01.png" alt="P17背景"><span class="thumb-meta"><b>17</b><span>迁移：第二品牌及其他市场任务如何复用？</span><small>15秒</small></span></button>
+      <button class="thumb" type="button" data-index="17"><img src="images/p18-closing-blue-light-v01.png" alt="P18背景"><span class="thumb-meta"><b>18</b><span>给梅见一个方向，给企业一套判断机制。</span><small>10秒</small></span></button>
+    </div>
+  </section>
+
+  <aside class="notes-panel" id="notesPanel" hidden aria-labelledby="notesTitle">
+    <header>
+      <h2 id="notesTitle">P01 演讲备注</h2>
+      <button type="button" id="notesClose">关闭</button>
+    </header>
+    <div class="notes-content" id="notesContent"></div>
+  </aside>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const stage = document.getElementById("stage");
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const controls = document.getElementById("controls");
+      const keyboardHelp = document.getElementById("keyboardHelp");
+      const prevButton = document.getElementById("prevButton");
+      const nextButton = document.getElementById("nextButton");
+      const pageStatus = document.getElementById("pageStatus");
+      const overview = document.getElementById("overview");
+      const overviewButton = document.getElementById("overviewButton");
+      const overviewClose = document.getElementById("overviewClose");
+      const thumbs = Array.from(document.querySelectorAll(".thumb"));
+      const notesPanel = document.getElementById("notesPanel");
+      const notesButton = document.getElementById("notesButton");
+      const notesClose = document.getElementById("notesClose");
+      const notesTitle = document.getElementById("notesTitle");
+      const notesContent = document.getElementById("notesContent");
+      const fullscreenButton = document.getElementById("fullscreenButton");
+      const p02Slide = document.querySelector(".slide-p02");
+      const p02QuestionZone = document.getElementById("p02-question-zone");
+      const p02Index = slides.indexOf(p02Slide);
+
+      let currentIndex = 0;
+      let p02Step = 1;
+      let controlsTimer = null;
+
+      function scaleStage() {
+        const scale = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+        stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      }
+
+      function indexFromHash() {
+        const hash = window.location.hash.replace("#", "").toLowerCase();
+        const index = slides.findIndex((slide) => slide.id.toLowerCase() === hash);
+        return index >= 0 ? index : 0;
+      }
+
+      function updateNotes() {
+        const activeSlide = slides[currentIndex];
+        const source = activeSlide.querySelector(".notes-source");
+        notesTitle.textContent = `${activeSlide.dataset.page} 演讲备注`;
+        notesContent.innerHTML = source ? source.innerHTML : "本页暂无备注。";
+      }
+
+      function setP02Step(step) {
+        p02Step = step === 2 ? 2 : 1;
+        p02Slide.dataset.step = String(p02Step);
+        p02QuestionZone.setAttribute("aria-hidden", String(p02Step !== 2));
+      }
+
+      function showSlide(index, options = {}) {
+        const previousIndex = currentIndex;
+        currentIndex = Math.max(0, Math.min(index, slides.length - 1));
+        if (currentIndex === p02Index) {
+          const requestedStep = options.p02Step === 2 ? 2 : options.p02Step === 1 ? 1 : null;
+          setP02Step(requestedStep ?? (previousIndex > p02Index ? 2 : 1));
+        }
+        slides.forEach((slide, slideIndex) => {
+          const active = slideIndex === currentIndex;
+          slide.classList.toggle("is-active", active);
+          slide.setAttribute("aria-hidden", String(!active));
+        });
+        document.body.classList.toggle("p02-active", currentIndex === p02Index);
+        thumbs.forEach((thumb, thumbIndex) => {
+          thumb.setAttribute("aria-current", String(thumbIndex === currentIndex));
+        });
+        pageStatus.textContent = `${String(currentIndex + 1).padStart(2, "0")} / ${slides.length}`;
+        prevButton.disabled = currentIndex === 0;
+        nextButton.disabled = currentIndex === slides.length - 1;
+        history.replaceState(null, "", `#${slides[currentIndex].id}`);
+        updateNotes();
+        if (currentIndex === p02Index) {
+          hideControls();
+        } else {
+          revealControls();
+        }
+      }
+
+      function navigateBy(direction) {
+        if (direction > 0 && currentIndex === p02Index && p02Step === 1) {
+          setP02Step(2);
+          revealControls();
+          return;
+        }
+        if (direction < 0 && currentIndex === p02Index && p02Step === 2) {
+          setP02Step(1);
+          revealControls();
+          return;
+        }
+        showSlide(currentIndex + direction);
+      }
+
+      function toggleOverview(forceState) {
+        const shouldShow = typeof forceState === "boolean" ? forceState : overview.hidden;
+        overview.hidden = !shouldShow;
+        overviewButton.setAttribute("aria-expanded", String(shouldShow));
+        if (shouldShow) {
+          toggleNotes(false);
+          thumbs[currentIndex].focus();
+        } else {
+          overviewButton.focus();
+        }
+        revealControls();
+      }
+
+      function toggleNotes(forceState) {
+        const shouldShow = typeof forceState === "boolean" ? forceState : notesPanel.hidden;
+        notesPanel.hidden = !shouldShow;
+        notesButton.setAttribute("aria-pressed", String(shouldShow));
+        if (shouldShow) {
+          toggleOverview(false);
+          updateNotes();
+          notesClose.focus();
+        }
+        revealControls();
+      }
+
+      async function toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          fullscreenButton.textContent = "全屏不可用";
+          window.setTimeout(() => {
+            fullscreenButton.textContent = "全屏";
+          }, 1600);
+        }
+      }
+
+      function revealControls() {
+        controls.classList.remove("is-idle");
+        keyboardHelp.classList.remove("is-idle");
+        window.clearTimeout(controlsTimer);
+        controlsTimer = window.setTimeout(() => {
+          if (overview.hidden && notesPanel.hidden && !controls.matches(":focus-within")) {
+            controls.classList.add("is-idle");
+            keyboardHelp.classList.add("is-idle");
+          }
+        }, 2400);
+      }
+
+      function hideControls() {
+        window.clearTimeout(controlsTimer);
+        controls.classList.add("is-idle");
+        keyboardHelp.classList.add("is-idle");
+      }
+
+      prevButton.addEventListener("click", () => navigateBy(-1));
+      nextButton.addEventListener("click", () => navigateBy(1));
+      overviewButton.addEventListener("click", () => toggleOverview());
+      overviewClose.addEventListener("click", () => toggleOverview(false));
+      notesButton.addEventListener("click", () => toggleNotes());
+      notesClose.addEventListener("click", () => toggleNotes(false));
+      fullscreenButton.addEventListener("click", toggleFullscreen);
+
+      thumbs.forEach((thumb) => {
+        thumb.addEventListener("click", () => {
+          const targetIndex = Number(thumb.dataset.index);
+          showSlide(targetIndex, targetIndex === p02Index ? { p02Step: 1 } : {});
+          toggleOverview(false);
+        });
+      });
+
+      document.addEventListener("fullscreenchange", () => {
+        fullscreenButton.textContent = document.fullscreenElement ? "退出全屏" : "全屏";
+        scaleStage();
+      });
+
+      window.addEventListener("resize", scaleStage);
+      window.addEventListener("hashchange", () => showSlide(indexFromHash()));
+      document.addEventListener("mousemove", (event) => {
+        if (currentIndex === p02Index && event.clientY < window.innerHeight - 96) {
+          hideControls();
+          return;
+        }
+        revealControls();
+      }, { passive: true });
+      document.addEventListener("focusin", revealControls);
+
+      document.addEventListener("keydown", (event) => {
+        if (event.target.closest("button, a, input, textarea, select, [contenteditable='true']") && [" ", "Enter"].includes(event.key)) return;
+
+        if (["ArrowRight", "PageDown", " "].includes(event.key) && overview.hidden && notesPanel.hidden) {
+          event.preventDefault();
+          navigateBy(1);
+          revealControls();
+        } else if (["ArrowLeft", "PageUp"].includes(event.key) && overview.hidden && notesPanel.hidden) {
+          event.preventDefault();
+          navigateBy(-1);
+          revealControls();
+        } else if (event.key === "Home" && overview.hidden && notesPanel.hidden) {
+          event.preventDefault();
+          showSlide(0);
+        } else if (event.key === "End" && overview.hidden && notesPanel.hidden) {
+          event.preventDefault();
+          showSlide(slides.length - 1);
+        } else if (event.key.toLowerCase() === "g") {
+          event.preventDefault();
+          toggleOverview();
+        } else if (event.key.toLowerCase() === "n") {
+          event.preventDefault();
+          toggleNotes();
+        } else if (event.key.toLowerCase() === "f") {
+          event.preventDefault();
+          toggleFullscreen();
+        } else if (event.key === "Escape") {
+          if (!overview.hidden) toggleOverview(false);
+          if (!notesPanel.hidden) toggleNotes(false);
+        }
+      });
+
+      scaleStage();
+      showSlide(indexFromHash());
+      revealControls();
+    })();
+  </script>
+</body>
+</html>
+<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" data-netlify-site-id="66511aef-8bb3-48c7-9b1d-697366b31f21" data-app-host="app.netlify.com"></script>
