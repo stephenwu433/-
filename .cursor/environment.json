@@ -1,0 +1,4 @@
+{
+  "name": "ban",
+  "install": "bash .cursor/install.sh"
+}
