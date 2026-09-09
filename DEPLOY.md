@@ -27,14 +27,33 @@ PLANFLOW_AUTH_MODE=clerk
 DATABASE_URL=（Neon 连接串，带 sslmode=require）
 CLERK_PUBLISHABLE_KEY=（与前端相同的 pk_…）
 PLANFLOW_CORS_ORIGINS=https://ban-weld.vercel.app
+
+# 可选但排期必需：AI 自动分析排期
+OPENAI_API_KEY=sk-…
+# PLANFLOW_AI_BASE_URL=https://api.openai.com/v1
+# PLANFLOW_AI_MODEL=gpt-4o-mini
+# DeepSeek 示例：PLANFLOW_AI_BASE_URL=https://api.deepseek.com/v1
+# PLANFLOW_AI_MODEL=deepseek-chat
 ```
 
 5. Deploy。记下 API 地址，例如：`https://ban-api-xxx.vercel.app`  
-6. 打开 `https://你的-API/health` 应返回 `"status":"ok"`。
+6. 打开 `https://你的-API/health` 应返回 `"status":"ok"`；若已配 AI key，`ai_schedule.configured` 应为 `true`。
 7. 回到**前端** Vercel 项目 → 环境变量，把  
    `NEXT_PUBLIC_PLANFLOW_API_URL` 改成这个 API 地址 → 重新部署前端。
 
-> 数据库表需已在 Neon 执行过迁移（本地/`migrate.py` 跑过即可）。
+> 数据库表需已在 Neon 执行过迁移（本地/`migrate.py` 跑过即可；含 `014_schedule_ai_analysis.sql`）。
+
+### AI 排期怎么用
+
+任务排期**默认且必须**走 AI 分析（按需求生成时）。
+
+1. 在后端配置 `OPENAI_API_KEY`（或兼容接口的 Base URL / Model）。  
+2. 项目写好「目标 / 需求」（每行一条）和计划起止日期。  
+3. 打开「全周期排期」→ 点 **① AI 分析并生成排期**。  
+4. 系统分析需求后输出五阶段工作项，并显示「AI 分析结论」。  
+5. 未配置 key 时无法按需求生成排期（可临时用高级方式：从已有任务挂阶段 / 空阶段）。
+
+---
 
 ### 备选：Render Docker
 
@@ -63,7 +82,7 @@ NEXT_PUBLIC_PLANFLOW_API_URL=https://你的-API-域名
 
 ## 3. 互相对齐（很重要，漏一步会登录或接口失败）
 
-1. **Render**：把 `PLANFLOW_CORS_ORIGINS` 改成真实前端 URL，Redeploy。  
+1. **Render / API Vercel**：把 `PLANFLOW_CORS_ORIGINS` 改成真实前端 URL，Redeploy。  
 2. **Clerk Dashboard** → Domains / Allowed origins：加上前端 URL；Sign-in/Sign-up 指向该域名。  
 3. 确认后端是 `PLANFLOW_AUTH_MODE=clerk`（不要用 DEV）。
 
@@ -74,7 +93,7 @@ NEXT_PUBLIC_PLANFLOW_API_URL=https://你的-API-域名
 1. 负责人用正式网址登录，打开「我的团队」→ 已有「产品一组」或新建团队。  
 2. 「邀请成员」生成链接，发给同事（对方需能打开同一前端域名）。  
 3. 建议每人先改显示名，避免负责人下拉出现 `user_…`。  
-4. 用试用项目「品牌官网改版（试用）」演示：全周期排期 → 每日任务 → 日报。
+4. 用试用项目「品牌官网改版（试用）」演示：全周期排期（可 AI 分析）→ 每日任务 → 日报。
 
 ---
 
@@ -84,6 +103,7 @@ NEXT_PUBLIC_PLANFLOW_API_URL=https://你的-API-域名
 - [ ] 能注册/登录  
 - [ ] 能看到团队与项目  
 - [ ] 每日任务能填工时  
+- [ ] （可选）配置 `OPENAI_API_KEY` 后，排期页可点「AI 分析并生成排期」  
 - [ ] 另一台电脑 / 手机浏览器也能打开（同一域名）
 
 ---
@@ -98,6 +118,7 @@ docker run --rm -p 8000:8000 \
   -e DATABASE_URL='…' \
   -e CLERK_PUBLISHABLE_KEY='pk_…' \
   -e PLANFLOW_CORS_ORIGINS='https://your-front.example.com' \
+  -e OPENAI_API_KEY='sk-…' \
   planflow-api
 ```
 

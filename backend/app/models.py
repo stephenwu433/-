@@ -138,6 +138,10 @@ class Project(Base):
     plan_confirmed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    schedule_ai_analysis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    schedule_generation_mode: Mapped[str | None] = mapped_column(
+        String, nullable=True
+    )
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

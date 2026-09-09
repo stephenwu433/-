@@ -516,14 +516,18 @@ class ProjectCycleScheduleResponse(BaseModel):
     work_item_count: int = 0
     linked_task_count: int = 0
     phases: list[ProjectPhaseResponse] = Field(default_factory=list)
+    # Present when generated with AI analysis.
+    ai_analysis: str | None = None
+    generation_mode: str | None = None
 
 
 class GenerateCycleScheduleRequest(BaseModel):
     replace_existing: bool = True
     phase_count: int = Field(default=5, ge=1, le=12)
-    # from_requirements: build full-cycle plan from requirement text (recommended)
-    # from_tasks / phases_only / placeholders: legacy modes
-    seed_mode: str = Field(default="from_requirements", max_length=40)
+    # ai_analyze (default): LLM analyzes requirements then fills the fixed five phases
+    # from_requirements: same as ai_analyze (always AI for requirement-based schedules)
+    # from_tasks / phases_only / placeholders: legacy / advanced modes
+    seed_mode: str = Field(default="ai_analyze", max_length=40)
     phase_names: list[str] | None = None
     # Free-text requirements (one item per line). Falls back to project.objective.
     requirements_text: str | None = Field(default=None, max_length=8000)
@@ -531,6 +535,8 @@ class GenerateCycleScheduleRequest(BaseModel):
     save_requirements_to_project: bool = True
     # Also create real Task rows linked to each generated work item.
     create_tasks: bool = True
+    # Requirement-based schedules always use AI; kept for API compatibility.
+    use_ai: bool = True
 
 
 class ImportTasksRequest(BaseModel):

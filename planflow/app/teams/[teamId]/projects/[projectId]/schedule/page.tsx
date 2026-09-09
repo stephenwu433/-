@@ -13,6 +13,7 @@ import {
   deleteWorkItem,
   expandCycleScheduleToDaily,
   generateCycleSchedule,
+  getAiScheduleStatus,
   getCycleSchedule,
   getDailyPlan,
   importTasksIntoSchedule,
@@ -50,10 +51,12 @@ export default function ProjectCycleSchedulePage() {
   const [busy, setBusy] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [seedMode, setSeedMode] = useState<SeedMode>("from_requirements");
+  const [seedMode, setSeedMode] = useState<SeedMode>("ai_analyze");
   const [requirementsText, setRequirementsText] = useState("");
   const [createTasks, setCreateTasks] = useState(true);
   const [weekdaysOnly, setWeekdaysOnly] = useState(true);
+  const [aiConfigured, setAiConfigured] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [newPhaseName, setNewPhaseName] = useState("");
   const [importPhaseId, setImportPhaseId] = useState("");
   const [newItemTitleByPhase, setNewItemTitleByPhase] = useState<Record<string, string>>(
@@ -73,14 +76,21 @@ export default function ProjectCycleSchedulePage() {
       setSchedule(null);
       return;
     }
-    const [payload, membersPayload, tasksPayload, projectsPayload, planPayload] =
+    const [payload, membersPayload, tasksPayload, projectsPayload, planPayload, aiStatus] =
       await Promise.all([
         getCycleSchedule(token, teamId, projectId),
         listMembers(token, teamId),
         listTasks(token, teamId, projectId),
         listTeamProjects(token, teamId),
         getDailyPlan(token, teamId, projectId).catch(() => null),
+        getAiScheduleStatus(token).catch(() => ({
+          configured: false,
+          model: null,
+          base_url: null,
+        })),
       ]);
+    setAiConfigured(Boolean(aiStatus.configured));
+    if (payload.ai_analysis) setAiAnalysis(payload.ai_analysis);
     setSchedule(payload);
     setMembers(membersPayload.members);
     setTasks(tasksPayload.tasks);
@@ -131,18 +141,23 @@ export default function ProjectCycleSchedulePage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("拿不到登录 token");
+      const usesRequirements =
+        mode === "from_requirements" || mode === "ai_analyze";
       const payload = await generateCycleSchedule(token, teamId, projectId, {
         replace_existing: replaceExisting,
         seed_mode: mode,
         phase_count: 5,
-        requirements_text:
-          mode === "from_requirements" ? requirementsText.trim() || null : null,
+        requirements_text: usesRequirements
+          ? requirementsText.trim() || null
+          : null,
         save_requirements_to_project:
-          mode === "from_requirements" && Boolean(requirementsText.trim()),
-        create_tasks: mode === "from_requirements" ? createTasks : false,
+          usesRequirements && Boolean(requirementsText.trim()),
+        create_tasks: usesRequirements ? createTasks : false,
+        use_ai: mode === "ai_analyze",
       });
       setSchedule(payload);
       setSeedMode(mode);
+      setAiAnalysis(payload.ai_analysis || null);
       if (payload.phases[0]) setImportPhaseId(payload.phases[0].id);
       const tasksPayload = await listTasks(token, teamId, projectId);
       setTasks(tasksPayload.tasks);
@@ -478,10 +493,10 @@ export default function ProjectCycleSchedulePage() {
               {empty ? (
                 <section className="rounded-md border border-dashed border-zinc-300 px-6 py-8">
                   <p className="text-center text-sm font-medium text-zinc-900">
-                    根据需求生成全周期排期
+                    AI 分析需求并生成全周期排期
                   </p>
                   <p className="mt-2 text-center text-sm text-zinc-600">
-                    先确认项目设置里有起止日期，再在下方填写需求。系统会按全周期拆成可执行工作项。
+                    任务排期由系统自动分析需求后给出。请确认项目起止日期，并在下方填写需求。
                   </p>
                   <div className="mx-auto mt-5 max-w-2xl">
                     <label className="block text-xs font-medium text-zinc-500">
@@ -522,15 +537,30 @@ export default function ProjectCycleSchedulePage() {
                     </Link>
                     <button
                       type="button"
-                      disabled={busy}
-                      onClick={() => void onGenerate(true, "from_requirements")}
+                      disabled={busy || !aiConfigured}
+                      title={
+                        aiConfigured
+                          ? "AI 分析需求并生成排期"
+                          : "需配置 OPENAI_API_KEY 后才能生成排期"
+                      }
+                      onClick={() => void onGenerate(true, "ai_analyze")}
                       className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                     >
-                      {busy ? "生成中…" : "① 生成总体排期"}
+                      {busy ? "分析中…" : "① AI 分析并生成排期"}
                     </button>
                   </div>
+                  {!aiConfigured ? (
+                    <p className="mt-3 text-center text-xs text-amber-800">
+                      任务排期依赖 AI 分析。请在后端配置 OPENAI_API_KEY（可用 DeepSeek 等兼容接口 +
+                      PLANFLOW_AI_BASE_URL）。
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-center text-xs text-zinc-500">
+                      系统将分析需求并输出五阶段全周期排期与工作项。
+                    </p>
+                  )}
                   <details className="mx-auto mt-6 max-w-2xl text-sm text-zinc-600">
-                    <summary className="cursor-pointer text-zinc-500">其他生成方式</summary>
+                    <summary className="cursor-pointer text-zinc-500">高级：非 AI 辅助方式</summary>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -561,41 +591,43 @@ export default function ProjectCycleSchedulePage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={busy || !aiConfigured}
+                          title={
+                            aiConfigured
+                              ? "AI 重新分析需求并覆盖排期"
+                              : "需配置 OPENAI_API_KEY"
+                          }
                           onClick={() => {
                             if (
                               window.confirm(
-                                "将按当前需求重新生成全周期排期（覆盖现有阶段与工作项），确定吗？",
+                                "将用 AI 重新分析需求并覆盖现有排期，确定吗？",
                               )
                             ) {
-                              void onGenerate(true, "from_requirements");
+                              void onGenerate(true, "ai_analyze");
                             }
                           }}
                           className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
                         >
-                          按需求重新生成
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "重新生成会覆盖现有阶段与工作项，确定吗？",
-                              )
-                            ) {
-                              void onGenerate(true, seedMode);
-                            }
-                          }}
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                        >
-                          其他方式重生成
+                          AI 重新分析排期
                         </button>
                       </div>
                     </div>
+                    {aiAnalysis ? (
+                      <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                          AI 分析结论
+                          {schedule.generation_mode
+                            ? ` · ${schedule.generation_mode}`
+                            : ""}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-zinc-800">
+                          {aiAnalysis}
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <label className="block text-xs font-medium text-zinc-500">
-                        项目需求（每行一条，可改后点「按需求重新生成」）
+                        项目需求（每行一条，可改后点「AI 重新分析排期」）
                       </label>
                       <textarea
                         value={requirementsText}

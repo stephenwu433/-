@@ -8,6 +8,7 @@ export type WorkItemStatus = "todo" | "doing" | "done";
 
 export type SeedMode =
   | "from_requirements"
+  | "ai_analyze"
   | "from_tasks"
   | "phases_only"
   | "placeholders";
@@ -54,6 +55,8 @@ export type CycleSchedule = {
   work_item_count: number;
   linked_task_count: number;
   phases: ProjectPhase[];
+  ai_analysis?: string | null;
+  generation_mode?: string | null;
 };
 
 export type UpdateWorkItemInput = {
@@ -85,6 +88,7 @@ export type GenerateScheduleInput = {
   requirements_text?: string | null;
   save_requirements_to_project?: boolean;
   create_tasks?: boolean;
+  use_ai?: boolean;
 };
 
 function base(teamId: string, projectId: string) {
@@ -93,6 +97,14 @@ function base(teamId: string, projectId: string) {
 
 export function getCycleSchedule(token: string, teamId: string, projectId: string) {
   return apiFetch<CycleSchedule>(base(teamId, projectId), token);
+}
+
+export function getAiScheduleStatus(token: string) {
+  return apiFetch<{
+    configured: boolean;
+    model: string | null;
+    base_url: string | null;
+  }>("/ai/status", token);
 }
 
 export function generateCycleSchedule(
@@ -106,11 +118,12 @@ export function generateCycleSchedule(
     body: JSON.stringify({
       replace_existing: input.replace_existing ?? true,
       phase_count: input.phase_count ?? 5,
-      seed_mode: input.seed_mode ?? "from_requirements",
+      seed_mode: input.seed_mode ?? "ai_analyze",
       phase_names: input.phase_names,
       requirements_text: input.requirements_text ?? null,
       save_requirements_to_project: input.save_requirements_to_project ?? true,
       create_tasks: input.create_tasks ?? true,
+      use_ai: input.use_ai ?? true,
     }),
   });
 }
