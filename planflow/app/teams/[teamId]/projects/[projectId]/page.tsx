@@ -419,7 +419,12 @@ export default function ProjectTasksPage() {
                 <p className="text-lg font-medium text-zinc-900">{project.name}</p>
                 <p className="text-xs text-zinc-500">
                   {project.planned_start || "未设开始"} →{" "}
-                  {project.planned_end || "未设结束"} · {project.status}
+                  {project.planned_end || "未设结束"} ·{" "}
+                  {PROJECT_STATUS_LABELS[
+                    project.status === "paused" || project.status === "done"
+                      ? project.status
+                      : "active"
+                  ]}
                   {project.plan_confirmed ? " · 计划已确认" : " · 计划未确认"}
                 </p>
               </div>

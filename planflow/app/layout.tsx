@@ -2,6 +2,8 @@ import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { NotificationsNavLink } from "@/components/NotificationsNavLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 >
                   团队
                 </Link>
+                <NotificationsNavLink />
                 <UserButton />
               </Show>
               <Show when="signed-out">

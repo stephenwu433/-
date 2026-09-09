@@ -106,12 +106,72 @@ def main() -> int:
         if item["task_id"] != task_id or item["title"] != "今日亲自做的事":
             print("ERROR: unexpected task payload", item, file=sys.stderr)
             return 1
+        if item.get("bucket") != "today":
+            print("ERROR: expected bucket=today", item, file=sys.stderr)
+            return 1
+        if payload.get("today_count") != 1 or payload.get("overdue_count") != 0:
+            print("ERROR: expected today_count=1 overdue_count=0", payload, file=sys.stderr)
+            return 1
         print("list OK")
+
+        yesterday = today - timedelta(days=1)
+        overdue = client.post(
+            f"/teams/{team_id}/projects/{project_id}/tasks",
+            headers=headers,
+            json={
+                "title": "昨天该做完的事",
+                "assignee_user_id": user_id,
+                "due_date": yesterday.isoformat(),
+            },
+        )
+        overdue.raise_for_status()
+        overdue_id = overdue.json()["id"]
+
+        later_due = today + timedelta(days=3)
+        later = client.post(
+            f"/teams/{team_id}/projects/{project_id}/tasks",
+            headers=headers,
+            json={
+                "title": "还在推进的后续事",
+                "assignee_user_id": user_id,
+                "due_date": later_due.isoformat(),
+            },
+        )
+        later.raise_for_status()
+        later_id = later.json()["id"]
+        patched_later = client.patch(
+            f"/teams/{team_id}/projects/{project_id}/tasks/{later_id}",
+            headers=headers,
+            json={"status": "doing"},
+        )
+        patched_later.raise_for_status()
+
+        board = client.get(
+            "/my-daily-tasks",
+            headers=headers,
+            params={"view_date": today.isoformat()},
+        )
+        board.raise_for_status()
+        board_payload = board.json()
+        if board_payload.get("overdue_count") != 1:
+            print("ERROR: expected overdue_count=1", board_payload, file=sys.stderr)
+            return 1
+        if board_payload.get("later_count") != 1:
+            print("ERROR: expected later_count=1", board_payload, file=sys.stderr)
+            return 1
+        by_id = {t["task_id"]: t for t in board_payload["tasks"]}
+        if by_id.get(overdue_id, {}).get("bucket") != "overdue":
+            print("ERROR: overdue bucket", by_id.get(overdue_id), file=sys.stderr)
+            return 1
+        if by_id.get(later_id, {}).get("bucket") != "later":
+            print("ERROR: later bucket", by_id.get(later_id), file=sys.stderr)
+            return 1
+        print("buckets OK")
 
         hours = client.put(
             f"/teams/{team_id}/projects/{project_id}/tasks/{task_id}/time-entries/{today.isoformat()}",
             headers=headers,
-            json={"hours": 2.5, "note": "推进中"},
+            json={"hours": 2.5, "note": "推进中", "completion_percent": 40},
         )
         hours.raise_for_status()
 
@@ -129,11 +189,17 @@ def main() -> int:
         )
         again.raise_for_status()
         again_payload = again.json()
-        if again_payload["doing_count"] != 1:
-            print("ERROR: expected doing_count=1", again_payload, file=sys.stderr)
+        if again_payload["doing_count"] < 1:
+            print("ERROR: expected doing_count>=1", again_payload, file=sys.stderr)
             return 1
         if again_payload["my_logged_hours"] != 2.5:
             print("ERROR: expected my_logged_hours=2.5", again_payload, file=sys.stderr)
+            return 1
+        today_item = next(
+            t for t in again_payload["tasks"] if t["task_id"] == task_id
+        )
+        if today_item.get("my_completion_percent") != 40:
+            print("ERROR: expected completion 40", today_item, file=sys.stderr)
             return 1
         print("status+hours OK")
 
